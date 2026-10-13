@@ -1,0 +1,4 @@
+# Archivos generados al simular los ejemplos
+*.vvp
+*.vcd
+*.fst
