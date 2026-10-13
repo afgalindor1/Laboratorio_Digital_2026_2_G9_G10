@@ -69,13 +69,6 @@ El laboratorio se desarrolla bajo el siguiente esquema:
    * Mantener el orden y la limpieza en el laboratorio.
    * Informar cualquier desperfecto o irregularidad con los equipos al profesor.
 
-## Cronograma
-
-| Semana | Fechas | Actividad | Entrega |
-|---|---|---|---|
-| Por definir | Por definir | Laboratorio de periféricos: lectura de los fundamentos, elección del periférico y acuerdo del alcance con el profesor | — |
-| Por definir | Por definir | Laboratorio de periféricos: diseño, descripción en HDL y simulación | Preinforme |
-| Por definir | Por definir | Laboratorio de periféricos: implementación en la FPGA | Informe, repositorio y video |
 
 ## Laboratorios
 
