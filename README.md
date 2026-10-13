@@ -18,7 +18,7 @@ El laboratorio de Electrónica Digital I tiene como objetivo principal complemen
 
 **Profesores:**
 
-- Johan Sebastian Eslava
+- Johnny Cubides
 - Andrés Felipe Galindo Rojas
 
 ## Metodología
