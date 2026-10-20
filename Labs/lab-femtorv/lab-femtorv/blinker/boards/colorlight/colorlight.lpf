@@ -1,0 +1,30 @@
+# =============================================================================
+# Restricciones del BLINKER: Colorlight 5A-75E v8.2
+# Pines tomados de SOC.lpf (ejemplo femtoriscv del repositorio) y del pinout
+# docs/colorlight-5a-75e-v8.2.drawio.pdf.
+# Si su tarjeta es la v7.1, revise el pinout de esa versión.
+# =============================================================================
+
+# Reloj de 25 MHz
+LOCATE COMP "clk" SITE "P6";
+IOBUF PORT "clk" IO_TYPE=LVCMOS33;
+FREQUENCY PORT "clk" 25 MHZ;
+
+# Botón de la tarjeta (reset)
+LOCATE COMP "resetn" SITE "R7";
+IOBUF PORT "resetn" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+
+# LEDs externos (conector J2: salidas)
+LOCATE COMP "leds_ext[0]" SITE "F3";
+LOCATE COMP "leds_ext[1]" SITE "F5";
+LOCATE COMP "leds_ext[2]" SITE "G3";
+LOCATE COMP "leds_ext[3]" SITE "G4";
+LOCATE COMP "leds_ext[4]" SITE "H3";
+IOBUF PORT "leds_ext[0]" IO_TYPE=LVCMOS33;
+IOBUF PORT "leds_ext[1]" IO_TYPE=LVCMOS33;
+IOBUF PORT "leds_ext[2]" IO_TYPE=LVCMOS33;
+IOBUF PORT "leds_ext[3]" IO_TYPE=LVCMOS33;
+IOBUF PORT "leds_ext[4]" IO_TYPE=LVCMOS33;
+
+BLOCK RESETPATHS;
+BLOCK ASYNCPATHS;
