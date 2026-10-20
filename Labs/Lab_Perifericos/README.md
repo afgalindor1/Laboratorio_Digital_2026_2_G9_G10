@@ -95,8 +95,8 @@ Si la simulación no cumple lo especificado, se vuelve a los pasos 2, 3 y 4; si 
 | Entregable | Contenido | Guía |
 |---|---|---|
 | **Bitácora grupal** | Las ocho etapas, los experimentos de síntesis, resultados y análisis | [Guía de la bitácora](Bitacora.md) |
-| **Repositorio en GitHub Classroom** | Código Verilog, testbench, archivo de restricciones, README corto y commits que muestren el proceso | [Guía de la bitácora: repositorio](Bitacora.md#el-repositorio-en-github-classroom) |
-| **Video** | Explicación del flujo de desarrollo con su diseño y demostración del prototipo | [Guía de la bitácora: video](Bitacora.md#el-video) |
+| **Repositorio en GitHub** | Código Verilog, testbench, archivo de restricciones, README corto y commits que muestren el proceso | [Guía de la bitácora: repositorio](Bitacora.md#el-repositorio-en-github-classroom) |
+
 
 ## Evaluación
 
