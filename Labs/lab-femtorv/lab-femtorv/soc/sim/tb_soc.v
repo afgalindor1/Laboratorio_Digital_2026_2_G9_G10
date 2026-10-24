@@ -48,6 +48,12 @@ module tb_soc;
   // Reloj de 25 MHz: periodo de 40 ns
   always #20 clk = ~clk;
 
+  // ---------------------------------------------------- Control del tiempo ---
+  integer ciclos_max;
+  integer ciclo = 0;
+  integer valor;
+  always @(posedge clk) ciclo <= ciclo + 1;
+
   // ------------------------------------------------- Receptor UART del PC ---
   integer i;
   reg [7:0] caracter;
@@ -66,12 +72,6 @@ module tb_soc;
     caracteres = caracteres + 1;
     ultimo = ciclo;
   end
-
-  // ---------------------------------------------------- Control del tiempo ---
-  integer ciclos_max;
-  integer ciclo = 0;
-  integer valor;
-  always @(posedge clk) ciclo <= ciclo + 1;
 
   initial begin
     if (!$value$plusargs("ciclos=%d", ciclos_max)) ciclos_max = 2_000_000;

@@ -49,6 +49,11 @@ RTL := rtl/SOC.v rtl/chip_select.v rtl/cpu/femtorv32_quark.v rtl/memory/Memory.v
 RTL += $(filter-out $(RTL),$(wildcard rtl/perip_*.v))
 
 RAM_PALABRAS := 8192
+
+# Icarus Verilog 13 o más reciente (el de OSS CAD Suite) rechaza usar una señal
+# antes de declararla, y el FemtoRV Quark lo hace. Si esta versión de iverilog
+# acepta la opción para permitirlo, se usa; las versiones anteriores no la necesitan.
+IV_RELAX := $(shell bash -c '$(RUN) $(IVERILOG) -gno-strict-declaration -E -o /dev/null /dev/null' >/dev/null 2>&1 && echo -gno-strict-declaration -Wno-declaration-after-use)
 CFLAGS := -march=rv32i -mabi=ilp32 -Os -g -ffreestanding -nostdlib \
           -ffunction-sections -fdata-sections -Wall
 
@@ -99,7 +104,7 @@ endif
 sim: firmware.hex
 	mkdir -p $(B)
 	# -DBENCH: en simulación, inicializa registros internos del CPU que en la FPGA arrancan en 0
-	$(RUN) $(IVERILOG) -g2012 -DBENCH -o $(B)/tb_soc.vvp -s tb_soc sim/tb_soc.v $(RTL)
+	$(RUN) $(IVERILOG) -g2012 $(IV_RELAX) -DBENCH -o $(B)/tb_soc.vvp -s tb_soc sim/tb_soc.v $(RTL)
 	$(RUN) $(VVP) -n $(B)/tb_soc.vvp $(ARGS) | grep -v "readmemh"
 
 wave:

@@ -1,4 +1,6 @@
 # Archivos generados al simular los ejemplos
-*.vvp
-*.vcd
+build/
+firmware.hex
 *.fst
+*.vcd
+*.vvp
