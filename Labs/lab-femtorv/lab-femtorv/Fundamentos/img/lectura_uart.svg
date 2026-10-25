@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="470" viewBox="0 0 940 470" font-family="Helvetica, Arial, sans-serif">
+<rect width="940" height="470" fill="#FFFFFF"/>
+<text x="16" y="30" font-size="19" font-weight="700" fill="#16202E">Una lectura: el programa pregunta si la UART está ocupada  (UART_CONTROL &amp; UART_OCUPADA)</text>
+<rect x="560" y="44" width="175" height="302" fill="#FCE9D6"/>
+<text x="297.5" y="62" font-size="13" text-anchor="middle" fill="#6B7280">ciclo 1</text>
+<line x1="210" y1="44" x2="210" y2="346" stroke="#D9D6CC" stroke-width="1"/>
+<text x="472.5" y="62" font-size="13" text-anchor="middle" fill="#6B7280">ciclo 2</text>
+<line x1="385" y1="44" x2="385" y2="346" stroke="#D9D6CC" stroke-width="1"/>
+<text x="647.5" y="62" font-size="13" text-anchor="middle" fill="#6B7280">ciclo 3</text>
+<line x1="560" y1="44" x2="560" y2="346" stroke="#D9D6CC" stroke-width="1"/>
+<text x="822.5" y="62" font-size="13" text-anchor="middle" fill="#6B7280">ciclo 4</text>
+<line x1="735" y1="44" x2="735" y2="346" stroke="#D9D6CC" stroke-width="1"/>
+<text x="16" y="98.0" font-size="15" fill="#16202E" font-family="Menlo, Consolas, monospace">clk</text>
+<polyline fill="none" stroke="#2563A8" stroke-width="2" points="210,106 210,80 297.5,80 297.5,106 385,106 385,106 385,80 472.5,80 472.5,106 560,106 560,106 560,80 647.5,80 647.5,106 735,106 735,106 735,80 822.5,80 822.5,106 910,106"/>
+<text x="16" y="144.0" font-size="15" fill="#16202E" font-family="Menlo, Consolas, monospace">estado del CPU</text>
+<polygon points="213,139.0 221,126 374,126 382,139.0 374,152 221,152" fill="#EEF3FA" stroke="#2563A8" stroke-width="1.6"/>
+<text x="297.5" y="144.0" font-size="14" text-anchor="middle" fill="#16202E" font-family="Menlo, Consolas, monospace">BUSCAR</text>
+<polygon points="388,139.0 396,126 549,126 557,139.0 549,152 396,152" fill="#EEF3FA" stroke="#2563A8" stroke-width="1.6"/>
+<text x="472.5" y="144.0" font-size="14" text-anchor="middle" fill="#16202E" font-family="Menlo, Consolas, monospace">ESPERAR</text>
+<polygon points="563,139.0 571,126 724,126 732,139.0 724,152 571,152" fill="#EEF3FA" stroke="#2563A8" stroke-width="1.6"/>
+<text x="647.5" y="144.0" font-size="14" text-anchor="middle" fill="#16202E" font-family="Menlo, Consolas, monospace">EJECUTAR</text>
+<polygon points="738,139.0 746,126 899,126 907,139.0 899,152 746,152" fill="#EEF3FA" stroke="#2563A8" stroke-width="1.6"/>
+<text x="822.5" y="144.0" font-size="14" text-anchor="middle" fill="#16202E" font-family="Menlo, Consolas, monospace">ESPERAR MEM</text>
+<text x="16" y="190.0" font-size="15" fill="#16202E" font-family="Menlo, Consolas, monospace">mem_addr</text>
+<polygon points="213,185.0 221,172 549,172 557,185.0 549,198 221,198" fill="#EEF3FA" stroke="#2563A8" stroke-width="1.6"/>
+<text x="385.0" y="190.0" font-size="14" text-anchor="middle" fill="#16202E" font-family="Menlo, Consolas, monospace">0x0000_0058</text>
+<polygon points="563,185.0 571,172 899,172 907,185.0 899,198 571,198" fill="#EEF3FA" stroke="#2563A8" stroke-width="1.6"/>
+<text x="735.0" y="190.0" font-size="14" text-anchor="middle" fill="#16202E" font-family="Menlo, Consolas, monospace">0x0040_0010</text>
+<text x="16" y="236.0" font-size="15" fill="#16202E" font-family="Menlo, Consolas, monospace">rd (mem_rstrb)</text>
+<polyline fill="none" stroke="#2563A8" stroke-width="2.5" points="210,218 385,218 385,218 385,244 560,244 560,244 560,218 735,218 735,218 735,244 910,244"/>
+<text x="297.5" y="236" font-size="12" text-anchor="middle" fill="#6B7280">1</text>
+<text x="472.5" y="238" font-size="12" text-anchor="middle" fill="#6B7280">0</text>
+<text x="647.5" y="236" font-size="12" text-anchor="middle" fill="#6B7280">1</text>
+<text x="822.5" y="238" font-size="12" text-anchor="middle" fill="#6B7280">0</text>
+<text x="16" y="282.0" font-size="15" fill="#16202E" font-family="Menlo, Consolas, monospace">cs</text>
+<polygon points="213,277.0 221,264 549,264 557,277.0 549,290 221,290" fill="#EEF3FA" stroke="#2563A8" stroke-width="1.6"/>
+<text x="385.0" y="282.0" font-size="14" text-anchor="middle" fill="#16202E" font-family="Menlo, Consolas, monospace">1000000  RAM</text>
+<polygon points="563,277.0 571,264 899,264 907,277.0 899,290 571,290" fill="#EEF3FA" stroke="#2563A8" stroke-width="1.6"/>
+<text x="735.0" y="282.0" font-size="14" text-anchor="middle" fill="#16202E" font-family="Menlo, Consolas, monospace">0000001  UART</text>
+<text x="16" y="328.0" font-size="15" fill="#16202E" font-family="Menlo, Consolas, monospace">mem_rdata</text>
+<polygon points="213,323.0 221,310 549,310 557,323.0 549,336 221,336" fill="#EEF3FA" stroke="#2563A8" stroke-width="1.6"/>
+<text x="385.0" y="328.0" font-size="14" text-anchor="middle" fill="#16202E" font-family="Menlo, Consolas, monospace">instrucción</text>
+<line x1="563" y1="323.0" x2="732" y2="323.0" stroke="#D9D6CC" stroke-width="2"/>
+<polygon points="738,323.0 746,310 899,310 907,323.0 899,336 746,336" fill="#EEF3FA" stroke="#2563A8" stroke-width="1.6"/>
+<text x="822.5" y="328.0" font-size="14" text-anchor="middle" fill="#16202E" font-family="Menlo, Consolas, monospace">0x0000_0200</text>
+<line x1="735" y1="40" x2="735" y2="354" stroke="#C2410C" stroke-width="2.5" stroke-dasharray="6 4"/>
+<text x="735" y="372" font-size="14" font-weight="700" text-anchor="middle" fill="#C2410C">flanco: la UART pone su respuesta</text>
+<text x="16" y="402" font-size="15" fill="#16202E">Ciclo 3: el CPU pone la dirección del registro CONTROL y rd = 1.</text>
+<text x="16" y="430" font-size="15" fill="#16202E">En el flanco al final del ciclo 3 la UART copia su estado a d_out.</text>
+<text x="16" y="458" font-size="15" fill="#16202E">Ciclo 4: el dato llega al CPU por mem_rdata. 0x200 = bit 9 en 1: "ocupada, pregunta otra vez".</text>
+</svg>

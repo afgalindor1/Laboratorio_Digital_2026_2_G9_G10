@@ -4,7 +4,7 @@
 
 **Objetivo de la semana:** diseñar un periférico mapeado en memoria, conectarlo al SoC, controlarlo desde C y medir cuánto cuesta hacer una tarea por software.
 
-**Antes de empezar:** lean completo [Fundamentos 02](Fundamentos/02_Bus_y_perifericos.md), en especial las secciones 5 a 10.
+**Antes de empezar:** repasen las secciones 4 a 7 de [Fundamentos 02](Fundamentos/02_Bus_y_perifericos.md): cómo se elige el bloque y el registro, una escritura y una lectura en el bus, cómo está hecho un periférico por dentro y la tabla de registros.
 
 **El periférico:** un **GPIO** (*General Purpose Input/Output*, entradas y salidas de propósito general) con un registro de LEDs y uno de pulsadores, en la dirección base `0x0041_0000` (`cs[1]`, que hoy está libre). Es el periférico más sencillo posible, a propósito: el reto es la conexión con el procesador, no la lógica.
 
@@ -54,9 +54,9 @@ cd soc
 cp ../plantillas/perip_gpio.v rtl/perip_gpio.v
 ```
 
-Completen las partes marcadas `/* COMPLETAR */`. Mientras quede alguna, el archivo no compila (es intencional). Guíense por `rtl/mult/perip_mult.v` y por la sección 7 de [Fundamentos 02](Fundamentos/02_Bus_y_perifericos.md#7-anatomía-de-un-periférico-las-tres-partes).
+Completen las partes marcadas `/* COMPLETAR */`. Mientras quede alguna, el archivo no compila (es intencional). Guíense por `rtl/mult/perip_mult.v` y por la sección 6 de [Fundamentos 02](Fundamentos/02_Bus_y_perifericos.md#6-cómo-está-hecho-un-periférico-por-dentro): su periférico tiene las mismas tres partes (decodificador, escritura y lectura).
 
-Tres reglas que salen de las secciones 5 y 6 de Fundamentos 02:
+Tres reglas que salen de la sección 5 de Fundamentos 02:
 
 1. **Escribir** solo en el flanco en que `cs && wr` y la dirección es la del registro.
 2. **Leer**: en el flanco en que `cs && rd`, poner el registro pedido en `d_out`.
@@ -76,7 +76,16 @@ iverilog -g2012 -o build/gpio_check.vvp rtl/perip_gpio.v && echo "Compila"
 cp ../plantillas/tb_perip_gpio.v sim/tb_perip_gpio.v
 ```
 
-El testbench trae las tareas `escribir()`, `leer()` y `comprobar()`, que imitan lo que hace el procesador en el bus, y una prueba de ejemplo. **Agreguen una prueba por cada fila y columna de su tabla de registros** (la lista está en el comentario `COMPLETAR` del archivo).
+**¿Por qué probarlo solo?** Si lo prueban directamente con el procesador y algo falla, el error puede estar en el periférico, en `SOC.v`, en la dirección, en el programa en C… Si el periférico ya pasó su propio testbench, **el error no está en él**. Es la regla de oro de cualquier diseño con bus: probar cada bloque por separado antes de juntarlos.
+
+El testbench trae las tareas `escribir()`, `leer()` y `comprobar()`, que imitan lo que hace el procesador en el bus (un `sw` y un `lw`, como en la sección 5 de Fundamentos 02), y una prueba de ejemplo:
+
+```verilog
+escribir(32'h0041_0004, 32'hA5);       // como un sw: escribe 0xA5 en LEDS
+comprobar("salida leds", leds, 8'hA5); // ¿los LEDs muestran 0xA5?
+```
+
+**Agreguen una prueba por cada fila y columna de su tabla de registros** (la lista está en el comentario `COMPLETAR` del archivo). Prueben también lo que **no** debe pasar: escribir en BOTONES (solo lectura), escribir con `cs = 0` (un acceso para otro periférico) y leer una dirección sin registro.
 
 ```bash
 iverilog -g2012 -o build/tb_gpio.vvp sim/tb_perip_gpio.v rtl/perip_gpio.v
@@ -94,12 +103,57 @@ Cada prueba imprime `OK` o `ERROR`. El final debe decir `--- 0 errores ---`.
 
 ## Tarea 4. Conectarlo al SoC
 
-Hagan en `rtl/SOC.v` los cuatro cambios de la sección 9 de [Fundamentos 02](Fundamentos/02_Bus_y_perifericos.md#9-cómo-se-conecta-un-periférico-nuevo-al-soc):
+Hoy la dirección `0x0041_xxxx` ya activa `cs[1]`, pero no hay nada conectado: lo que se escribe se pierde y lo que se lee vale 0. Conectar el periférico es **llenar ese hueco**, y se hace solo en `rtl/SOC.v`. El procesador y `chip_select.v` no se tocan.
 
-1. Declarar `wire [31:0] gpio_dout;` (junto a `uart_dout`, `mult_dout`…).
-2. En la instancia de `chip_select`, cambiar `.chip1_dout(32'b0)` por `.chip1_dout(gpio_dout)`.
-3. Borrar la línea `assign LEDS_EXT = 8'b0;`.
-4. En su lugar, instanciar `perip_gpio` conectando: `clk`, `reset` (¡activo en alto: `!resetn`!), `d_in` ← `mem_wdata`, `cs` ← `cs_chip1`, `addr` ← `mem_addr`, `rd`, `wr`, `d_out` → `gpio_dout`, `botones` ← `BOTONES`, `leds` → `LEDS_EXT`.
+```mermaid
+flowchart LR
+    CS["chip_select"] -- "cs[1] = cs_chip1" --> G["perip_gpio<br/>(su periférico)"]
+    BUS["Bus: mem_addr, mem_wdata,<br/>rd, wr"] --> G
+    G -- "gpio_dout" --> CS
+    BOT["BOTONES<br/>(pines)"] --> G
+    G -- "leds" --> LED["LEDS_EXT<br/>(pines)"]
+```
+
+El periférico se agrega en el `Makefile` automáticamente: cualquier archivo `rtl/perip_*.v` se compila solo. Las tarjetas (`boards/`) ya llevan `BOTONES` y `LEDS_EXT` a pines físicos: tampoco hay que tocarlas.
+
+Los cuatro cambios en `rtl/SOC.v`:
+
+**1. Declarar el cable del dato de salida.** Junto a los de los otros periféricos (línea 83, después de `wire [31:0] RAM_rdata;`):
+
+```verilog
+wire [31:0] gpio_dout;
+```
+
+**2. Llevar ese cable al multiplexor de lectura.** En la conexión de `chip_select`, línea 88, cambien `32'b0` por el cable nuevo:
+
+```verilog
+.chip1_dout(gpio_dout),    // antes: .chip1_dout(32'b0),
+```
+
+Sin este cambio, el procesador puede escribir en el periférico pero siempre lee 0.
+
+**3. Borrar la línea que apaga los LEDs** (línea 160):
+
+```verilog
+assign LEDS_EXT = 8'b0;    // ← borrarla
+```
+
+**4. Conectar el periférico en ese mismo lugar.** Usen como modelo la conexión del multiplicador (líneas 144 – 153): mismas señales del bus, otro `cs` y otro cable de salida, más los pines.
+
+```verilog
+perip_gpio gpio (
+    .clk    (clk),
+    .reset  (!resetn),     // el periférico usa reset activo en alto
+    .d_in   (mem_wdata),
+    .cs     (cs_chip1),
+    .addr   (mem_addr),
+    .rd     (rd),
+    .wr     (wr),
+    .d_out  (gpio_dout),
+    .botones(BOTONES),
+    .leds   (LEDS_EXT)
+);
+```
 
 Comprueben que el SoC sigue funcionando con el programa de la semana 1:
 
@@ -137,7 +191,7 @@ La última línea de cada simulación muestra el valor final de `LEDS_EXT`. Comp
 
 1. El programa imprime `LEDS = 0x0000002A` después de escribir `0x2A`. ¿Qué parte de su periférico hace posible esa lectura?
 2. Busquen en `build/firmware.lst` el `lw` que lee los pulsadores dentro del `while (1)`. ¿Qué dirección usa y cómo se calculó?
-3. ¿Qué pasaría si quitaran `volatile` de la macro `REG()`? ([Fundamentos 03, sección 7](Fundamentos/03_De_C_a_la_FPGA.md#7-acceder-a-un-periférico-desde-c-reg-y-volatile)).
+3. ¿Qué pasaría si quitaran `volatile` de la macro `REG()`? ([Fundamentos 03, sección 3](Fundamentos/03_De_C_a_la_FPGA.md#3-acceder-a-un-periférico-desde-c-reg-y-volatile)).
 4. El programa pregunta por los pulsadores una y otra vez (*polling*). ¿Por qué no hay otra opción en el Quark?
 
 ---
@@ -167,7 +221,7 @@ El programa `firmware/parpadeo.c` enciende y apaga el LED 0 lo más rápido que 
 make firmware PROG=parpadeo
 ```
 
-En `build/firmware.lst`, dentro de `main`, encuentren las instrucciones del `while (1)`. Con la tabla de ciclos por instrucción ([Fundamentos 01, sección 8](Fundamentos/01_RISC-V_y_FemtoRV.md#8-la-máquina-de-estados-y-los-ciclos-por-instrucción)):
+En `build/firmware.lst`, dentro de `main`, encuentren las instrucciones del `while (1)`. Con la tabla de ciclos por instrucción ([Fundamentos 01, sección 6](Fundamentos/01_RISC-V_y_FemtoRV.md#cuántos-ciclos-tarda-cada-instrucción)):
 
 | Instrucción del bucle | Tipo | Ciclos |
 |---|---|---|
@@ -179,7 +233,7 @@ En `build/firmware.lst`, dentro de `main`, encuentren las instrucciones del `whi
 Calculen para su tarjeta (25 MHz o 27 MHz):
 
 1. El **periodo** y la **frecuencia** de la señal del LED 0.
-2. El **ciclo útil**: ¿cuántos de esos ciclos está el LED encendido? Fíjense en qué ciclo de cada `sw` cambia el LED (sección 5 de Fundamentos 02).
+2. El **ciclo útil**: ¿cuántos de esos ciclos está el LED encendido? Fíjense en qué ciclo de cada `sw` cambia el LED ([sección 5 de Fundamentos 02](Fundamentos/02_Bus_y_perifericos.md#5-una-escritura-y-una-lectura-vistas-en-la-simulación)).
 
 ### 7.2 Simulación
 

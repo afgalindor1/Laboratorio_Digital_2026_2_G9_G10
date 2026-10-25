@@ -30,13 +30,12 @@ Esta es la estructura base de la **consola de videojuegos** del proyecto final: 
 
 Al terminar, el grupo será capaz de:
 
-1. Explicar qué es **RISC-V** (un conjunto de instrucciones) y qué es el **FemtoRV** (un circuito que ejecuta esas instrucciones), y por qué no son lo mismo.
-2. Reconocer en el código Verilog del FemtoRV sus cinco partes: contador de programa, registro de instrucción, decodificador, banco de registros con ALU, e interfaz de memoria.
-3. Explicar el ciclo **buscar → decodificar → ejecutar** y calcular cuántos ciclos de reloj tarda una instrucción.
-4. Construir el **mapa de memoria** del SoC leyendo su código.
-5. Seguir el camino de una línea de C hasta la FPGA: compilador, código máquina, `firmware.hex`, memoria del SoC.
-6. Diseñar un **periférico mapeado en memoria**, probarlo con un testbench y controlarlo desde C.
-7. **Predecir y medir** el tiempo que tarda una tarea hecha por software.
+1. Explicar la **E/S mapeada en memoria**: el procesador solo lee y escribe direcciones, y un periférico es un circuito que responde en algunas de ellas.
+2. Construir el **mapa de memoria** del SoC leyendo su código: qué bloque atiende cada dirección y qué registro hay dentro de cada bloque.
+3. **Conectar un periférico propio** al mapa de memoria, probarlo con un testbench y controlarlo desde un programa en C.
+4. Explicar, a nivel general, cómo funciona un procesador: un PC que recorre una memoria, el ciclo **buscar → decodificar → ejecutar** y la diferencia entre **RISC-V** (el conjunto de instrucciones) y el **FemtoRV** (el circuito que lo ejecuta).
+5. Seguir el camino de una línea de C hasta el bus: compilador, `firmware.hex`, la instrucción `sw` o `lw` y las señales que se ven en la simulación.
+6. **Predecir y medir** cuánto tarda una tarea hecha por software, y usar ese dato para decidir qué va en hardware y qué en software.
 
 ## Qué hay en esta carpeta
 
@@ -125,9 +124,9 @@ Lectura obligatoria. Están escritos para alguien que **nunca ha visto un proces
 
 | Documento | Qué explica | Antes de |
 |---|---|---|
-| [01 · RISC-V y FemtoRV](Fundamentos/01_RISC-V_y_FemtoRV.md) | Conjunto de instrucciones, registros, tipos de instrucción, ciclo buscar-decodificar-ejecutar, las 5 partes del FemtoRV, ciclos por instrucción | Semana 1 |
-| [02 · Bus y periféricos](Fundamentos/02_Bus_y_perifericos.md) | Señales del bus, escritura y lectura ciclo a ciclo, decodificador de direcciones, mapa de memoria, anatomía de un periférico | Semana 1 (secciones 1 a 4) y Semana 2 (todo) |
-| [03 · De C a la FPGA](Fundamentos/03_De_C_a_la_FPGA.md) | Compilador cruzado, `crt0.S`, `linker.ld`, `firmware.hex`, `volatile`, cómo leer `firmware.lst` | Semana 1 |
+| [01 · Qué es un procesador](Fundamentos/01_RISC-V_y_FemtoRV.md) | Del blinker al procesador, registro y palabra, buscar-decodificar-ejecutar, las pocas instrucciones que van a leer, la máquina de estados del FemtoRV | Semana 1 |
+| [02 · El mapa de memoria y los periféricos](Fundamentos/02_Bus_y_perifericos.md) | **La idea central del laboratorio:** E/S mapeada en memoria, los bloques del SoC, el bus, cómo se elige el bloque y el registro, una escritura y una lectura en la simulación, cómo está hecho un periférico | Semana 1 (todo) y repaso en la Semana 2 |
+| [03 · De C a la FPGA](Fundamentos/03_De_C_a_la_FPGA.md) | Visión general del camino del programa, `REG` y `volatile`, cómo leer `firmware.lst` | Semana 1 |
 
 ## Entregables
 
@@ -142,7 +141,7 @@ Lectura obligatoria. Están escritos para alguien que **nunca ha visto un proces
 | Criterio | Qué se revisa |
 |---|---|
 | **Habilitantes** | Asistencia, punto de control de la semana 1 aprobado, commits realizados y justificados |
-| **Comprensión del procesador** | Predicción del blinker, ubicación de las 5 partes del FemtoRV, cálculo de ciclos por instrucción |
+| **Comprensión del procesador** | Predicción del blinker, ubicación del PC y de la máquina de estados en el FemtoRV, cálculo de ciclos por instrucción |
 | **Comprensión del SoC** | Mapa de memoria correcto y explicado; lectura de `firmware.lst` (de una línea de C a una instrucción `sw`) |
 | **Periférico** | Tabla de registros completa; Verilog sintetizable y trazable a la tabla; testbench que comprueba cada registro |
 | **Software** | Programa en C funcional en simulación y en la tarjeta |

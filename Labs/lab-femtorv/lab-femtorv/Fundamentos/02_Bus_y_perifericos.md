@@ -1,250 +1,261 @@
-# Fundamentos 02 · El bus, el mapa de memoria y los periféricos
+# Fundamentos 02 · El mapa de memoria y los periféricos
 
 [← Volver a la guía](../README.md)
 
-En [Fundamentos 01](01_RISC-V_y_FemtoRV.md) vimos que el procesador solo sabe hacer dos cosas con el exterior: **leer** y **escribir** direcciones de memoria. Este documento explica cómo, con solo eso, el procesador controla LEDs, envía caracteres por la UART o usa un multiplicador.
+Este es el documento más importante del laboratorio. Al terminarlo deberían poder explicar tres ideas:
+
+1. El procesador solo sabe **leer y escribir en direcciones**. Un periférico es un circuito que "vive" en algunas de esas direcciones.
+2. El SoC decide, mirando la dirección, **qué bloque** atiende cada acceso y, dentro de él, **qué registro**.
+3. Para que el procesador controle un circuito nuevo (el de ustedes), basta con **darle direcciones** en ese mapa. El procesador no se modifica: ustedes no lo diseñan, lo usan.
 
 ---
 
 ## Contenido
 
-1. [E/S mapeada en memoria: la idea central](#1-es-mapeada-en-memoria-la-idea-central)
-2. [El SoC: qué bloques tiene](#2-el-soc-qué-bloques-tiene)
-3. [Las señales del bus](#3-las-señales-del-bus)
-4. [El decodificador de direcciones y el mapa de memoria](#4-el-decodificador-de-direcciones-y-el-mapa-de-memoria)
-5. [Una escritura, ciclo a ciclo](#5-una-escritura-ciclo-a-ciclo)
-6. [Una lectura, ciclo a ciclo](#6-una-lectura-ciclo-a-ciclo)
-7. [Anatomía de un periférico: las tres partes](#7-anatomía-de-un-periférico-las-tres-partes)
-8. [La tabla de registros: la especificación de un periférico](#8-la-tabla-de-registros-la-especificación-de-un-periférico)
-9. [Cómo se conecta un periférico nuevo al SoC](#9-cómo-se-conecta-un-periférico-nuevo-al-soc)
-10. [Cómo se prueba un periférico](#10-cómo-se-prueba-un-periférico)
-11. [Preguntas de autoevaluación](#11-preguntas-de-autoevaluación)
+1. [La idea central: E/S mapeada en memoria](#1-la-idea-central-es-mapeada-en-memoria)
+2. [El SoC y sus bloques](#2-el-soc-y-sus-bloques)
+3. [El bus: los cables entre el procesador y los bloques](#3-el-bus-los-cables-entre-el-procesador-y-los-bloques)
+4. [El mapa de memoria: cómo se elige el bloque y el registro](#4-el-mapa-de-memoria-cómo-se-elige-el-bloque-y-el-registro)
+5. [Una escritura y una lectura, vistas en la simulación](#5-una-escritura-y-una-lectura-vistas-en-la-simulación)
+6. [Cómo está hecho un periférico por dentro](#6-cómo-está-hecho-un-periférico-por-dentro)
+7. [La tabla de registros: la especificación de un periférico](#7-la-tabla-de-registros-la-especificación-de-un-periférico)
 
 ---
 
-## 1. E/S mapeada en memoria: la idea central
+## 1. La idea central: E/S mapeada en memoria
 
-El procesador tiene una sola forma de comunicarse: **escribir un dato en una dirección** (`sw`) o **leer el dato de una dirección** (`lw`). No existe una instrucción "encender LED" ni "enviar por la UART".
+El procesador no tiene una instrucción "encender LED" ni "enviar por la UART". Solo tiene dos formas de comunicarse con el exterior:
 
-La solución es un acuerdo: **algunas direcciones no son memoria, son periféricos**. Un circuito "escucha" el bus y, cuando el procesador escribe en su dirección, toma el dato y hace algo con él. Cuando el procesador lee esa dirección, el circuito responde con un dato propio (por ejemplo, el estado de unos pulsadores).
+- **escribir** un dato en una dirección (instrucción `sw`, *store word*);
+- **leer** el dato de una dirección (instrucción `lw`, *load word*).
 
-```
-  Programa en C                      Lo que hace el hardware
-  ─────────────                      ───────────────────────
-  REG(0x00410004) = 0x2A;    ──►     el periférico GPIO guarda 0x2A en su registro
-                                     de LEDs: se encienden los LEDs 1, 3 y 5
-
-  x = REG(0x00410008);       ──►     el periférico GPIO responde con el estado
-                                     de los pulsadores
-```
-
-A esto se le llama **E/S mapeada en memoria** (*memory-mapped I/O*, MMIO). Si alguna vez programaron un Arduino a nivel de registros (`PORTB = 0x01;`), ya lo usaron: `PORTB` es una dirección de memoria conectada a los pines.
-
-**Ventaja:** el procesador no necesita instrucciones especiales. Para agregar un periférico nuevo basta con asignarle direcciones; el procesador no cambia.
-
-## 2. El SoC: qué bloques tiene
-
-Un **SoC** (*System on Chip*, sistema en un chip) es el procesador junto con su memoria y sus periféricos, todo dentro de la FPGA. El de este laboratorio está en `soc/rtl/SOC.v`:
-
-```mermaid
-flowchart TB
-    CPU["FemtoRV32 Quark<br/>(procesador)"]
-    CS["chip_select<br/>(decodificador de direcciones<br/>+ multiplexor de lectura)"]
-    RAM["RAM 32 KB<br/>programa, datos y pila"]
-    UART["UART<br/>0x0040_xxxx"]
-    MULT["Multiplicador<br/>0x0042_xxxx"]
-    GPIO["GPIO (Semana 2)<br/>0x0041_xxxx"]
-    CPU -- "mem_addr" --> CS
-    CS -- "cs[6]" --> RAM
-    CS -- "cs[0]" --> UART
-    CS -- "cs[2]" --> MULT
-    CS -. "cs[1]" .-> GPIO
-    CPU -- "mem_wdata, wr, rd" --> RAM & UART & MULT & GPIO
-    RAM & UART & MULT & GPIO -- "dato de salida" --> CS
-    CS -- "mem_rdata" --> CPU
-    UART <--> PC["PC (terminal serial)"]
-    GPIO <--> EXT["LEDs y pulsadores"]
-```
-
-Fíjense en dos detalles:
-
-- La **dirección** y el **dato a escribir** llegan a **todos** los bloques al mismo tiempo. Lo que decide cuál de ellos reacciona es su señal `cs` (*chip select*).
-- Cada bloque tiene su **dato de salida**, pero al procesador solo le llega **uno**: el que elige el multiplexor de `chip_select.v`.
-
-## 3. Las señales del bus
-
-El **bus** es el conjunto de cables entre el procesador y el resto del SoC. El FemtoRV tiene estas señales (están al inicio de `SOC.v`):
-
-| Señal | Bits | Dirección | Significado |
-|---|---|---|---|
-| `mem_addr` | 32 | CPU → SoC | Dirección que el procesador quiere leer o escribir |
-| `mem_wdata` | 32 | CPU → SoC | Dato que el procesador quiere escribir |
-| `mem_wmask` | 4 | CPU → SoC | Qué bytes de la palabra se escriben. `1111` = palabra completa, `0001` = solo el byte bajo, `0000` = **no hay escritura** |
-| `mem_rstrb` | 1 | CPU → SoC | Pulso de lectura (*read strobe*): 1 durante el ciclo en que el procesador pide un dato |
-| `mem_rdata` | 32 | SoC → CPU | Dato que el SoC le entrega al procesador |
-
-En `SOC.v` se resumen dos de ellas para que los periféricos las usen más fácil:
-
-```verilog
-wire wr = |mem_wmask;  // 1 si hay escritura (algún bit de la máscara en 1)
-wire rd = mem_rstrb;   // 1 si hay lectura
-```
-
-> **Ojo:** el procesador también usa el bus para **buscar sus instrucciones** en la RAM. Por eso en una simulación verán `rd = 1` muchísimas veces con direcciones bajas (`0x0000_0xxx`): son lecturas de instrucciones, no de datos.
-
-## 4. El decodificador de direcciones y el mapa de memoria
-
-`soc/rtl/chip_select.v` mira los **16 bits altos** de la dirección y activa **una sola** línea de `cs`:
-
-```verilog
-case (mem_addr[31:16])
-  16'h0040: cs = 7'b0000001;  // cs[0] -> UART
-  16'h0041: cs = 7'b0000010;  // cs[1] -> libre (GPIO en la semana 2)
-  16'h0042: cs = 7'b0000100;  // cs[2] -> multiplicador
-  ...
-  default:  cs = 7'b1000000;  // cs[6] -> RAM
-endcase
-```
-
-Como solo miran los 16 bits altos, cada periférico recibe un bloque de **64 KB** de direcciones (`0x0041_0000` a `0x0041_FFFF`). Dentro de ese bloque, el periférico usa los **bits bajos** para distinguir sus propios registros.
-
-Eso define el **mapa de memoria**: la tabla de qué hay en cada dirección. En la Semana 1 ustedes lo construyen leyendo el código. Este es el formato:
-
-| Rango de direcciones | Bloque | Señal `cs` | Registros (desplazamiento, nombre, L/E) |
-|---|---|---|---|
-| `0x0000_0000` – `0x0000_7FFF` | RAM | `cs[6]` | — |
-| `0x0040_0000` – `0x0040_FFFF` | ? | ? | ? |
-| … | … | … | … |
-
-La segunda parte de `chip_select.v` es un **multiplexor**: usa `cs` para elegir cuál `chipX_dout` llega a `mem_rdata`. Si `cs[2]` está activo, el procesador recibe lo que diga el multiplicador.
-
-## 5. Una escritura, ciclo a ciclo
-
-Este es el trozo de `gpio.c` (Semana 2) y lo que generó el compilador:
-
-```
-GPIO_LEDS = 0x2A;          →      li  a5, 42          # a5 = 0x2A
-                                  sw  a5, 4(s0)       # s0 = 0x0041_0000  →  MEM[0x0041_0004] = a5
-```
-
-Esto es lo que se ve en la simulación cuando se ejecuta el `sw` (cada columna es un ciclo de reloj):
-
-```
-Ciclo                 1             2            3           4
-Estado del CPU    FETCH_INSTR   WAIT_INSTR    EXECUTE    WAIT_ALU_OR_MEM
-mem_addr          0x0000_0108   0x0000_0108  0x0041_0004  0x0041_0004
-mem_rstrb (rd)        1             0            0           0
-mem_wmask           0000          0000         1111         0000      ← wr = 1 solo en EXECUTE
-mem_wdata             —             —        0x0000_002A      —
-cs[1]                 0             0            1           1
-LEDS_EXT             0x00          0x00         0x00        0x2A      ← cambia en el flanco
-                                                             ▲          al final del ciclo 3
-```
-
-1. **Ciclos 1 y 2:** el procesador busca la instrucción `sw` en la RAM (dirección `0x108`).
-2. **Ciclo 3 (EXECUTE):** pone la dirección `0x0041_0004`, el dato `0x2A` y la máscara `1111`. El decodificador activa `cs[1]`. El periférico ve `cs = 1`, `wr = 1` y dirección `…04`: **en el flanco de subida al final de este ciclo** guarda `0x2A`.
-3. **Ciclo 4:** los LEDs ya muestran `0x2A`. El procesador espera un ciclo (los `sw` tardan 4 ciclos) y pasa a la siguiente instrucción.
-
-**Regla para el periférico:** se escribe en el flanco en que `cs && wr` y la dirección corresponde al registro.
-
-## 6. Una lectura, ciclo a ciclo
-
-```
-x = GPIO_LEDS;             →      lw  a0, 4(s0)       # a0 = MEM[0x0041_0004]
-```
-
-```
-Ciclo                 1             2            3              4
-Estado del CPU    FETCH_INSTR   WAIT_INSTR    EXECUTE      WAIT_ALU_OR_MEM
-mem_addr          0x0000_0114   0x0000_0114  0x0041_0004    0x0041_0004
-mem_rstrb (rd)        1             0            1              0       ← rd = 1 en EXECUTE
-cs[1]                 0             0            1              1
-gpio_dout (d_out)     —             —            —          0x0000_002A ← el periférico responde
-mem_rdata             —             —            —          0x0000_002A    en el flanco
-registro a0         (viejo)       (viejo)      (viejo)       (viejo) → 0x2A al final del ciclo 4
-```
-
-1. **Ciclo 3 (EXECUTE):** el procesador pone la dirección y activa `rd`. El periférico ve `cs && rd` y dirección `…04`: **en el flanco** copia el valor de sus LEDs a `d_out`.
-2. **Ciclo 4:** `d_out` ya tiene el dato; el multiplexor de `chip_select` lo pasa a `mem_rdata` porque `cs[1]` sigue activo; el procesador lo guarda en `a0` al final del ciclo.
-
-**Regla para el periférico:** en el flanco en que `cs && rd`, poner en `d_out` el registro pedido. El procesador lo recoge en el ciclo siguiente.
-
-## 7. Anatomía de un periférico: las tres partes
-
-Todo periférico de este SoC tiene la misma estructura. Usen `soc/rtl/mult/perip_mult.v` como ejemplo; tiene estas tres partes:
+La solución es un acuerdo: **algunas direcciones no son memoria, son periféricos**. Un circuito está pendiente de su dirección; cuando el procesador escribe ahí, toma el dato y hace algo con él (por ejemplo, encender LEDs). Cuando el procesador lee ahí, el circuito responde con un dato propio (por ejemplo, el estado de unos pulsadores).
 
 ```mermaid
 flowchart LR
-    BUS["Bus<br/>addr, d_in,<br/>cs, wr, rd"] --> DEC["1. Decodificador interno<br/>¿a qué registro va?<br/>(bits bajos de addr)"]
-    DEC --> WR["2. Escritura<br/>registros que el CPU<br/>puede escribir"]
-    DEC --> RD["3. Lectura<br/>multiplexor hacia d_out"]
-    WR --> CORE["Lógica propia<br/>(el 'trabajo' del periférico:<br/>multiplicar, contar, PWM…)"]
-    CORE --> RD
-    WR --> OUT["Salidas al exterior<br/>(pines)"]
-    IN["Entradas del exterior"] --> RD
-    RD --> DOUT["d_out → chip_select"]
+    C1["Programa en C<br/>GPIO_LEDS = 0x2A;"] --> I1["El compilador lo<br/>convierte en un sw<br/>a la dirección 0x0041_0004"]
+    I1 --> P1["El periférico GPIO<br/>guarda 0x2A en su<br/>registro de LEDs"]
+    P1 --> L1["Se encienden<br/>los LEDs 1, 3 y 5"]
+    C2["Programa en C<br/>x = GPIO_BOTONES;"] --> I2["El compilador lo<br/>convierte en un lw<br/>de la dirección 0x0041_0008"]
+    I2 --> P2["El periférico GPIO<br/>responde con el estado<br/>de los pulsadores"]
+    P2 --> L2["x queda con el valor<br/>de los pulsadores"]
 ```
 
-| Parte | En `perip_mult.v` | En su GPIO |
+A esto se le llama **E/S mapeada en memoria** (*memory-mapped I/O*). Si alguna vez programaron un Arduino a nivel de registros (`PORTB = 0x01;`), ya lo usaron: `PORTB` es una dirección conectada a los pines.
+
+**Una analogía: un edificio.** Cada dirección es una oficina con su número. La mayoría de los pisos son bodegas (la RAM): lo que se deja ahí, ahí se queda. Pero algunos pisos tienen oficinas especiales: si se deja una carta en la oficina de la UART, alguien la toma y la envía al PC.
+
+**La ventaja:** para agregar un periférico nuevo basta con asignarle un piso libre del edificio. El procesador no cambia. Eso es exactamente lo que harán en la semana 2 con el GPIO y, después, con los periféricos de la consola.
+
+## 2. El SoC y sus bloques
+
+Un **SoC** (*System on Chip*, sistema en un chip) es el procesador junto con su memoria y sus periféricos, todo dentro de la FPGA. El de este laboratorio está descrito en `soc/rtl/SOC.v` y tiene estos bloques:
+
+| Bloque | Qué es | Para qué está |
 |---|---|---|
-| **1. Decodificador interno** | `case (addr[4:0])`: `0x04` → A, `0x08` → B, `0x0C` → init, `0x10` → result, `0x14` → done | `0x04` → LEDS, `0x08` → BOTONES |
-| **2. Escritura** | `if (cs && wr)` guarda A, B, init | `if (cs && wr)` guarda el registro LEDS |
-| **3. Lectura** | `if (cs && rd)` pone result o done en `d_out` | `if (cs && rd)` pone LEDS o BOTONES en `d_out` |
-| Lógica propia | el multiplicador `mult.v` (una máquina de estados) | ninguna: los registros van directo a los pines |
+| **FemtoRV32 Quark** | El procesador | Ejecuta el programa en C, instrucción por instrucción |
+| **RAM** | Memoria de 32 KB | Guarda el programa (las instrucciones) y sus variables |
+| **UART** | Puerto serial: envía y recibe bytes, un bit tras otro, por un solo cable | Que el programa le escriba texto al PC (la terminal) |
+| **Multiplicador** | Circuito que multiplica dos números de 16 bits | El procesador no tiene instrucción de multiplicar: se la delega a este periférico |
+| **GPIO** (semana 2) | *General Purpose Input/Output*: un registro para LEDs y otro para pulsadores | Es el periférico que ustedes diseñan |
+| **chip_select** | Decodificador de direcciones | Decide qué bloque atiende cada acceso |
 
-> **Una trampa del multiplicador:** cuando termina, `done` queda en 1 solo unos 30 ciclos; después la máquina de estados vuelve al inicio y **borra el resultado**. Si el programa no lee `RESULT` justo después de ver `DONE = 1`, lee 0. `mult_hw()` en `soc.h` lo hace bien. Es un buen ejemplo de por qué la tabla de registros debe decir **cuánto tiempo es válido** cada dato.
+```mermaid
+flowchart TB
+    CPU["FemtoRV32 Quark<br/>(procesador)"] -- "dirección, dato, wr, rd" --> BUS(("bus"))
+    BUS --> CS["chip_select<br/>mira la dirección y<br/>activa un solo cs"]
+    BUS --> RAM["RAM<br/>0x0000_xxxx"] & UART["UART<br/>0x0040_xxxx"] & GPIO["GPIO · semana 2<br/>0x0041_xxxx"] & MULT["Multiplicador<br/>0x0042_xxxx"]
+    CS -. "cs" .-> RAM
+    CS -.-> UART
+    CS -.-> GPIO
+    CS -.-> MULT
+    UART <--> PC["PC<br/>(terminal)"]
+    GPIO <--> EXT["LEDs y<br/>pulsadores"]
+```
 
-## 8. La tabla de registros: la especificación de un periférico
+Dos detalles del dibujo:
 
-Antes de escribir Verilog, un periférico se **especifica** con una tabla. Es la "caja negra" vista desde el programa: dice todo lo que el software necesita saber, sin explicar cómo está hecho por dentro.
+- La **dirección** y el **dato a escribir** llegan a **todos** los bloques al mismo tiempo (flechas continuas). Lo que decide cuál de ellos reacciona es su señal `cs` (*chip select*, flechas punteadas): solo uno la tiene en 1.
+- Para las lecturas hay un camino de vuelta, que no está dibujado: todos los bloques tienen un **dato de salida**, pero `chip_select` deja pasar hacia el procesador **uno solo**, el del bloque elegido.
 
-| Desplazamiento | Nombre | Acceso | Bits | Significado | Valor tras reset |
+## 3. El bus: los cables entre el procesador y los bloques
+
+El **bus** es el conjunto de cables que salen del procesador hacia el resto del SoC. Son cinco (están al inicio de `SOC.v`):
+
+| Señal | Bits | Sentido | Qué lleva |
+|---|---|---|---|
+| `mem_addr` | 32 | CPU → bloques | La **dirección** que el procesador quiere leer o escribir |
+| `mem_wdata` | 32 | CPU → bloques | El **dato a escribir** |
+| `mem_wmask` | 4 | CPU → bloques | Qué bytes se escriben: `1111` = la palabra completa, `0000` = **no hay escritura** |
+| `mem_rstrb` | 1 | CPU → bloques | Pulso de **lectura** (*read strobe*): vale 1 cuando el procesador pide un dato |
+| `mem_rdata` | 32 | bloques → CPU | El **dato leído** que vuelve al procesador |
+
+`SOC.v` (líneas 64 y 65) resume dos de ellas con nombres cortos, que son los que usan los periféricos:
+
+```verilog
+wire wr = |mem_wmask;  // 1 si el procesador está escribiendo
+wire rd = mem_rstrb;   // 1 si el procesador está leyendo
+```
+
+El `|` delante de `mem_wmask` es un **OR de sus 4 bits**: `wr` vale 1 si alguno de ellos vale 1.
+
+Dos cosas que van a ver en la simulación:
+
+- El procesador usa el mismo bus para **buscar sus instrucciones** en la RAM. Por eso verán `rd = 1` muchísimas veces con direcciones bajas (`0x0000_00xx`): son lecturas de instrucciones.
+- Mientras ejecuta una instrucción que no es `lw` ni `sw` (una suma, por ejemplo), `mem_addr` muestra un valor sin sentido. No pasa nada, porque `wr` y `rd` valen 0. Por eso **un periférico solo actúa si su `cs` vale 1 y además `wr` o `rd` valen 1**.
+
+## 4. El mapa de memoria: cómo se elige el bloque y el registro
+
+### La dirección en hexadecimal
+
+Una dirección tiene 32 bits. Se escribe en hexadecimal porque **cada dígito hexadecimal equivale exactamente a 4 bits** (`0` = `0000` … `F` = `1111`), así que 32 bits son 8 dígitos. El guion bajo solo separa las dos mitades para leer más fácil:
+
+| Dirección | 4 primeros dígitos (bits 31 a 16) | 4 últimos dígitos (bits 15 a 0) |
+|---|---|---|
+| `0x0040_0008` | `0040` → **¿qué bloque?** | `0008` → **¿qué registro dentro del bloque?** |
+
+### Dos niveles de decisión
+
+La misma dirección llega completa a dos lugares, y **cada uno mira una parte distinta**:
+
+```mermaid
+flowchart LR
+    A["mem_addr = 0x0040_0008"] --> CS["Nivel 1 · chip_select.v<br/>mira los bits 31 a 16: 0040<br/>→ es la UART: activa cs[0]"]
+    A --> P["Nivel 2 · perip_uart.v<br/>mira los bits 4 a 0: 08<br/>→ es el registro DATO"]
+    CS -- "cs = 1: el acceso es para la UART" --> P
+```
+
+**Nivel 1, el bloque.** `soc/rtl/chip_select.v` compara los 16 bits altos con una lista y activa **una sola** línea de `cs`:
+
+```verilog
+case (mem_addr[31:16])
+  16'h0040: cs = 7'b0000001;  // cs[0] → UART
+  16'h0041: cs = 7'b0000010;  // cs[1] → libre (GPIO en la semana 2)
+  16'h0042: cs = 7'b0000100;  // cs[2] → multiplicador
+  ...
+  default:  cs = 7'b1000000;  // cs[6] → RAM: cualquier otra dirección
+endcase
+```
+
+(En el archivo real los valores tienen nombres, como `CHIP0ADDR` y `CHIP0CS`. En la [Tarea 3 de la Semana 1](../Semana1.md#tarea-3-el-mapa-de-memoria) los van a recorrer línea por línea.)
+
+- La RAM es el caso `default`: **todo lo que no es un periférico, es RAM**. Así la lista solo tiene que reconocer a los periféricos.
+- Como solo se miran 16 bits, cada periférico recibe un rango de 65 536 direcciones (de `0x0041_0000` a `0x0041_FFFF`), aunque use solo unas pocas. Es un piso entero del edificio con dos o tres oficinas ocupadas: sobra espacio y la comparación es muy sencilla.
+
+**Nivel 2, el registro.** Dentro de cada periférico, un **decodificador interno** mira solo los **5 bits bajos** de la dirección para elegir el registro. Por ejemplo, la UART tiene dos: `+0x08` (DATO) y `+0x10` (CONTROL). Un periférico solo responde si su `cs` vale 1; si no, ignora el acceso aunque los bits bajos coincidan.
+
+**El camino de vuelta.** La segunda parte de `chip_select.v` es un **multiplexor**: usa `cs` para escoger cuál de los datos de salida (`chip0_dout`, `chip1_dout`…) llega al procesador por `mem_rdata`. En los espacios libres no hay nada conectado (`32'b0` en `SOC.v`), así que leerlos siempre da 0.
+
+### El mapa de memoria
+
+La lista completa de "rango de direcciones → bloque → registros" es el **mapa de memoria** del SoC. En la Semana 1 lo construyen ustedes leyendo el código. Este es el formato:
+
+| Rango de direcciones | Bloque | Señal `cs` | Dato que vuelve al CPU |
+|---|---|---|---|
+| `0x0000_0000` – `0x0000_7FFF` | RAM | `cs[6]` | `RAM_rdata` |
+| `0x0040_0000` – `0x0040_FFFF` | ? | ? | ? |
+| … | … | … | … |
+
+## 5. Una escritura y una lectura, vistas en la simulación
+
+Estos dos diagramas salen de la simulación real de `hola.c` (los mismos que van a buscar en GTKWave en la Tarea 5). Cada columna es un ciclo de reloj. Los nombres de los estados del procesador se explican en [Fundamentos 01, sección 6](01_RISC-V_y_FemtoRV.md#6-la-máquina-de-estados-del-femtorv); por ahora basta saber que primero **busca** la instrucción y luego la **ejecuta**.
+
+### Una escritura
+
+`uart_putc` hace `UART_DATO = 'H';`, que el compilador convierte en un `sw` a la dirección `0x0040_0008`:
+
+![Diagrama de tiempos de una escritura en la UART](img/escritura_uart.svg)
+
+1. **Ciclos 1 y 2:** el procesador lee la instrucción `sw` de la RAM. Por eso `cs` señala la RAM.
+2. **Ciclo 3:** pone en el bus la dirección de la UART, la letra (`0x48` es la `H` en ASCII) y `wr = 1`. `chip_select` activa solo el `cs` de la UART.
+3. **En el flanco de subida al final del ciclo 3**, la UART guarda la letra. Es el mismo principio de cualquier registro: se carga en el flanco del reloj.
+
+> **Regla para escribir en un periférico:** en el flanco en que `cs = 1`, `wr = 1` y la dirección es la del registro, guardar el dato.
+
+### Una lectura
+
+Después, `uart_putc` espera a que la UART termine preguntando una y otra vez por el bit "ocupada" del registro CONTROL (`0x0040_0010`). Cada pregunta es un `lw`:
+
+![Diagrama de tiempos de una lectura de la UART](img/lectura_uart.svg)
+
+1. **Ciclo 3:** el procesador pone la dirección del registro y `rd = 1`.
+2. **En el flanco al final del ciclo 3**, la UART copia su estado en su salida `d_out`.
+3. **Ciclo 4:** ese dato llega al procesador por `mem_rdata`. Aquí vale `0x0000_0200`: el bit 9 está en 1, "todavía ocupada", así que el programa vuelve a preguntar.
+
+> **Regla para leer de un periférico:** en el flanco en que `cs = 1` y `rd = 1`, poner en `d_out` el registro pedido. El procesador lo recoge en el ciclo siguiente.
+
+Fíjense en que una escritura y una lectura tardan lo mismo: **4 ciclos de reloj** (160 ns a 25 MHz).
+
+## 6. Cómo está hecho un periférico por dentro
+
+Todos los periféricos de este SoC tienen las mismas tres partes. El suyo también las tendrá.
+
+```mermaid
+flowchart LR
+    BUS["Bus<br/>addr, d_in, cs, wr, rd"] --> DEC["1. Decodificador<br/>¿a qué registro va?<br/>(5 bits bajos de addr)"]
+    DEC --> WR["2. Escritura<br/>guardar en el registro<br/>si cs y wr"]
+    DEC --> RD["3. Lectura<br/>poner el registro en d_out<br/>si cs y rd"]
+    WR --> TRAB["El trabajo propio<br/>(multiplicar, enviar,<br/>encender LEDs…)"]
+    TRAB --> RD
+    RD --> OUT["d_out<br/>hacia chip_select"]
+```
+
+| Parte | En la UART (`perip_uart.v`) | En el multiplicador (`perip_mult.v`) | En su GPIO |
+|---|---|---|---|
+| **1. Decodificador** | Líneas 134 – 138: `08` → DATO, `10` → CONTROL | Líneas 31 – 38: `04` → A, `08` → B, `0C` → init, `10` → result, `14` → done | `04` → LEDS, `08` → BOTONES |
+| **2. Escritura** | Líneas 157 – 163 | Líneas 52 – 56: `if (cs && wr)` guarda A, B, init | Guardar el registro LEDS |
+| **3. Lectura** | Líneas 165 – 171 | Líneas 64 – 68: `if (cs && rd)` pone result o done en `d_out` | Poner LEDS o BOTONES en `d_out` |
+| **Trabajo propio** | El transmisor y el receptor serial (`uart.v`) | El multiplicador (`mult.v`) | Ninguno: los registros van directo a los pines |
+
+### Cómo leer el código de un periférico: seguir las señales
+
+Al abrir un periférico aparecen señales como `wr`, `cs`, `d_in` o `sel`. **Cuando no sepan qué es una señal, búsquenla** (Ctrl+F en Lite XL; F3 salta a la siguiente coincidencia) hasta encontrar de dónde viene:
+
+1. Si está en la cabecera del módulo como `input`, viene de afuera: búsquenla en `SOC.v`, donde se conecta el periférico.
+2. Si no es una entrada, nace adentro: busquen dónde se le asigna un valor.
+
+Estas son las señales que reciben todos los periféricos (los números de línea son de la conexión de la UART en `SOC.v`):
+
+| Señal | Se conecta en `SOC.v` | Qué es |
+|---|---|---|
+| `cs` | `.cs(cs_uart)`, línea 125 | 1 si la dirección es de este periférico |
+| `wr` | `.wr(wr)`, línea 128 | 1 si el procesador está escribiendo |
+| `rd` | `.rd(rd)`, línea 127 | 1 si el procesador está leyendo |
+| `addr` | `.addr(mem_addr)`, línea 126 | La dirección completa |
+| `d_in` | `.d_in(mem_wdata)`, línea 124 | El dato que escribe el procesador |
+| `d_out` | `.d_out(uart_dout)`, línea 129 | Lo que el periférico responde al leerlo; va a `chip_select` |
+
+Abreviaturas que van a ver en casi cualquier diseño: `wr` = *write* (escribir) · `rd` = *read* (leer) · `d_in` / `d_out` = *data in* / *data out* · `sel` = *select* · `cs` = *chip select* · `tx` / `rx` = transmitir / recibir.
+
+### Un detalle de Verilog: las llaves `{ }`
+
+En la lectura de la UART (línea 168) aparece `{22'b0, tx_busy, rx_avail, rx_error, 7'b0}`. Las llaves **pegan bits uno al lado del otro**: lo que está más a la izquierda queda en los bits más altos. Para saber en qué bit queda cada señal, se cuenta **desde la derecha**, empezando en 0:
+
+| Pedazo | Ocupa los bits |
+|---|---|
+| `7'b0` | 0 a 6 |
+| `rx_error` | 7 |
+| `rx_avail` | 8 |
+| `tx_busy` | 9 |
+| `22'b0` | 10 a 31 |
+
+> **Una trampa del multiplicador:** cuando termina, `done` vale 1 solo unos 30 ciclos; después el circuito vuelve al inicio y **borra el resultado**. Si el programa no lee `RESULT` justo después de ver `DONE = 1`, lee 0. La función `mult_hw()` de `soc.h` lo hace bien. Es un buen ejemplo de por qué la tabla de registros debe decir **cuánto tiempo es válido** cada dato.
+
+## 7. La tabla de registros: la especificación de un periférico
+
+Antes de escribir Verilog, un periférico se **especifica** con una tabla: es la "caja negra" vista desde el programa. Dice todo lo que el software necesita saber, sin explicar cómo está hecho por dentro. Así se vería la del GPIO de la semana 2:
+
+| Dirección | Nombre | Acceso | Bits | Significado | Valor tras reset |
 |---|---|---|---|---|---|
-| `+0x04` | LEDS | Lectura/Escritura | `[7:0]` | LEDs externos; 1 = encendido | `0x00` |
-| `+0x08` | BOTONES | Solo lectura | `[3:0]` | Pulsadores; 1 = presionado | — |
+| `0x0041_0004` | LEDS | Lectura y escritura | `[7:0]` | LEDs externos; 1 = encendido | `0x00` |
+| `0x0041_0008` | BOTONES | Solo lectura | `[3:0]` | Pulsadores; 1 = presionado | — |
 
 Con esta tabla:
 
 - el **hardware** sabe qué decodificar, qué guardar y qué devolver;
-- el **software** sabe qué direcciones usar;
-- el **testbench** sabe qué comprobar: una prueba por cada fila y cada columna.
+- el **software** sabe qué direcciones usar (son los `#define` de `soc.h`);
+- el **testbench** sabe qué comprobar: una prueba por cada fila.
 
-En la consola, cada grupo entregará una tabla así para su periférico.
-
-## 9. Cómo se conecta un periférico nuevo al SoC
-
-Son cuatro cambios, todos en `soc/rtl/SOC.v` más el archivo nuevo del periférico:
-
-1. **Crear el periférico** en `soc/rtl/perip_gpio.v`. El `Makefile` agrega solo cualquier archivo `rtl/perip_*.v`.
-2. **Declarar el cable de su dato de salida**: `wire [31:0] gpio_dout;`
-3. **Conectar ese cable al multiplexor**, en la entrada del `chip_select` que corresponde a su dirección: `.chip1_dout(gpio_dout)`.
-4. **Instanciar el periférico** con las señales del bus (`mem_wdata`, `mem_addr`, `rd`, `wr`, su `cs`) y con sus pines hacia el exterior (`BOTONES`, `LEDS_EXT`), quitando la línea `assign LEDS_EXT = 8'b0;`.
-
-Las tarjetas (`soc/boards/`) ya llevan `BOTONES` y `LEDS_EXT` a pines físicos: no hay que tocarlas.
-
-## 10. Cómo se prueba un periférico
-
-La regla de oro: **probar el periférico solo antes de probarlo con el procesador.**
-
-Si se prueba directamente con el procesador y algo falla, el error puede estar en el periférico, en `SOC.v`, en la dirección, en el programa en C… Si el periférico ya pasó su propio testbench, el error **no está en él**.
-
-La plantilla `plantillas/tb_perip_gpio.v` trae dos tareas que imitan exactamente lo que hace el procesador en las secciones 5 y 6:
-
-```verilog
-escribir(32'h0041_0004, 32'hA5);   // como un sw
-leer(32'h0041_0008, valor);        // como un lw
-comprobar("leer BOTONES", valor, 32'h0000_0009);
-```
-
-Escriban **una prueba por cada fila de su tabla de registros**, y también pruebas de lo que **no** debe pasar: escribir en un registro de solo lectura, escribir con `cs = 0` (otro periférico) o leer una dirección sin registro.
-
-## 11. Preguntas de autoevaluación
-
-1. El procesador escribe `0x55` en `0x0042_0004`. ¿Qué bloques reciben el dato? ¿Cuál lo guarda y por qué?
-2. ¿Por qué cada periférico ocupa 64 KB de direcciones si solo tiene unos pocos registros?
-3. En la lectura de la sección 6, ¿por qué el dato llega al procesador un ciclo **después** de que activa `rd`?
-4. ¿Qué pasaría si dos periféricos usaran la misma entrada `chipX_dout` del multiplexor?
-5. ¿Qué devuelve una lectura a `0x0043_0000`, donde no hay ningún periférico? Búsquenlo en el código.
-6. Un compañero dice que su periférico "no funciona" con el procesador. ¿Qué le preguntarían primero?
+En la consola, cada grupo entregará una tabla así para su periférico. **Cómo conectar y probar un periférico nuevo** se explica paso a paso en la [Semana 2](../Semana2.md).
 
 [← Volver a la guía](../README.md)

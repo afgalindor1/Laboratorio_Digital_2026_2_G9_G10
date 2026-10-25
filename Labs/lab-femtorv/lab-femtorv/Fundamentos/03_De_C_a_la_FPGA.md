@@ -2,22 +2,17 @@
 
 [← Volver a la guía](../README.md)
 
-Este documento sigue el camino completo de un programa: desde `hola.c` hasta que el FemtoRV lo ejecuta dentro de la FPGA. Cada paso lo hace el `Makefile` de `soc/`; aquí se explica **qué hace y por qué**.
+Este documento da una **visión general** del camino de un programa: desde `hola.c` hasta que el FemtoRV lo ejecuta dentro de la FPGA. Todo el camino lo recorre el `Makefile` con un solo comando (`make sim` o `make syn`); aquí se explica qué pasa en cada paso, sin entrar en los detalles del compilador.
 
 ---
 
 ## Contenido
 
 1. [El camino completo](#1-el-camino-completo)
-2. [El compilador cruzado](#2-el-compilador-cruzado)
-3. [Lo que pasa antes de main(): crt0.S](#3-lo-que-pasa-antes-de-main-crt0s)
-4. [Dónde queda cada cosa: linker.ld](#4-dónde-queda-cada-cosa-linkerld)
-5. [De binario a firmware.hex](#5-de-binario-a-firmwarehex)
-6. [Cómo llega el programa a la FPGA](#6-cómo-llega-el-programa-a-la-fpga)
-7. [Acceder a un periférico desde C: REG y volatile](#7-acceder-a-un-periférico-desde-c-reg-y-volatile)
-8. [Cómo leer firmware.lst](#8-cómo-leer-firmwarelst)
-9. [El compilador es más listo de lo que parece](#9-el-compilador-es-más-listo-de-lo-que-parece)
-10. [Preguntas de autoevaluación](#10-preguntas-de-autoevaluación)
+2. [Cómo llega el programa a la FPGA](#2-cómo-llega-el-programa-a-la-fpga)
+3. [Acceder a un periférico desde C: REG y volatile](#3-acceder-a-un-periférico-desde-c-reg-y-volatile)
+4. [Cómo leer firmware.lst](#4-cómo-leer-firmwarelst)
+5. [El compilador es más listo de lo que parece](#5-el-compilador-es-más-listo-de-lo-que-parece)
 
 ---
 
@@ -25,167 +20,78 @@ Este documento sigue el camino completo de un programa: desde `hola.c` hasta que
 
 ```mermaid
 flowchart LR
-    C["hola.c<br/>+ soc.h"] --> GCC["riscv64-unknown-elf-gcc<br/>compilar y enlazar"]
-    S["crt0.S"] --> GCC
-    LD["linker.ld"] --> GCC
-    GCC --> ELF["firmware.elf<br/>código máquina +<br/>información de depuración"]
-    ELF --> LST["firmware.lst<br/>C + ensamblador<br/>(para leer)"]
-    ELF --> BIN["firmware.bin<br/>bytes puros"]
-    BIN --> HEX["firmware.hex<br/>una palabra por línea"]
-    HEX --> SIM["Simulación<br/>$readmemh en Memory.v"]
-    HEX --> SYN["Síntesis<br/>Yosys inicializa la BRAM"]
-    SYN --> BIT["Bitstream<br/>(.bit / .fs)"]
-    BIT --> FPGA["FPGA"]
+    C["hola.c<br/>su programa"] --> GCC["Compilador<br/>gcc para RISC-V"]
+    GCC --> HEX["firmware.hex<br/>el contenido<br/>de la memoria"]
+    GCC --> LST["firmware.lst<br/>el listado, para leer"]
+    HEX --> SIM["Simulación<br/>make sim"]
+    HEX --> SYN["Síntesis<br/>make syn"]
+    SYN --> FPGA["FPGA"]
 ```
 
-Todo eso lo hace `make firmware` (o `make sim`, que lo incluye). Los archivos generados quedan en `soc/build/` y `soc/firmware.hex`.
+1. **El compilador** traduce el programa en C a instrucciones RISC-V. Se llama *compilador cruzado* porque corre en el PC (que es x86) pero genera instrucciones para **otro** procesador: el FemtoRV.
+2. El resultado se guarda en **`firmware.hex`**: las instrucciones como palabras de 32 bits, **una por línea**. Es el contenido de la memoria del SoC, igual que el bloque `initial` del blinker llenaba su ROM, pero generado por el compilador.
+3. También se genera **`build/firmware.lst`**: cada línea de C con las instrucciones que produjo. Sirve para leer qué hace de verdad el procesador.
 
-## 2. El compilador cruzado
+Los archivos que intervienen:
 
-Un compilador normal (`gcc`) genera código para el procesador del computador donde corre (x86). Un **compilador cruzado** corre en el computador pero genera código para **otro** procesador: `riscv64-unknown-elf-gcc` genera código RISC-V.
-
-Las opciones que usa el `Makefile` y por qué:
-
-| Opción | Significado |
-|---|---|
-| `-march=rv32i` | Generar solo instrucciones RV32I: el Quark no tiene multiplicación (M) ni comprimidas (C) |
-| `-mabi=ilp32` | Enteros, `long` y punteros de 32 bits |
-| `-Os` | Optimizar para que el programa ocupe poco (la RAM es de 32 KB) |
-| `-g` | Guardar información para que `firmware.lst` muestre el C junto al ensamblador |
-| `-ffreestanding -nostdlib` | No hay sistema operativo ni biblioteca estándar: no existe `printf`, ni `malloc`, ni archivos |
-| `-T firmware/linker.ld` | Usar nuestro mapa de memoria (sección 4) |
-| `-lgcc` | Incluir las rutinas de software para `/`, `%` y `*` (el Quark no tiene esas instrucciones) |
-
-> **Sin sistema operativo** significa que el programa es lo único que corre. `main()` nunca debe terminar: por eso todos los programas acaban en `while (1)`.
-
-## 3. Lo que pasa antes de main(): crt0.S
-
-Cuando se suelta el reset, el PC vale `0x0000_0000`. Lo primero que hay ahí no es `main()` sino `crt0.S` (*C runtime zero*), un programa corto en ensamblador:
-
-```asm
-_start:
-  la sp, _stack_top      # 1. preparar la pila: C la necesita para variables locales y llamadas
-  la a0, __bss_start     # 2. poner en cero la zona .bss (variables globales sin valor inicial),
-  la a1, __bss_end       #    porque C garantiza que empiezan en 0
-  li a2, 0
-zero_bss:
-  bgeu a0, a1, bss_done
-  sw a2, 0(a0)
-  addi a0, a0, 4
-  j zero_bss
-bss_done:
-  call main              # 3. llamar a main()
-hang:
-  j hang                 # 4. si main() terminara, quedarse aquí para siempre
-```
-
-## 4. Dónde queda cada cosa: linker.ld
-
-El **enlazador** (*linker*) decide en qué dirección queda cada parte del programa. `linker.ld` le dice que hay una sola memoria de 32 KB que empieza en 0:
-
-```
-MEMORY { BRAM (RWX) : ORIGIN = 0x0000, LENGTH = 0x8000 }
-```
-
-y el orden de las **secciones**:
-
-| Sección | Contenido | Dónde |
+| Archivo | Qué es | ¿Lo modifican? |
 |---|---|---|
-| `.text` | Las instrucciones. Empieza con `_start` de `crt0.S` | desde `0x0000` |
-| `.rodata` | Constantes, por ejemplo los textos `"Hola desde el FemtoRV"` | después de `.text` |
-| `.data` | Variables globales con valor inicial | después |
-| `.bss` | Variables globales sin valor inicial (`crt0.S` las pone en 0) | después |
-| pila | 1 KB para variables locales y llamadas a funciones | al final del programa |
+| `firmware/hola.c` (y los demás `.c`) | Su programa | Sí |
+| `firmware/soc.h` | Las direcciones de los periféricos y funciones para usarlos (`imprimir`, `mult_hw`…) | En la semana 2, para agregar las de su periférico |
+| `firmware/crt0.S` | Lo primero que ejecuta el procesador al arrancar: prepara lo necesario y llama a `main()` | No |
+| `firmware/linker.ld` | Le dice al compilador que la memoria es de 32 KB y empieza en la dirección 0 | No |
+| `firmware.hex` | El contenido de la memoria (lo genera el `Makefile`) | No |
+| `build/firmware.lst` | El listado para leer (lo genera el `Makefile`) | No |
 
-El archivo `build/firmware.map` muestra la dirección de cada función y variable.
+> **Sin sistema operativo.** El programa es lo único que corre en el procesador; no hay Windows ni Linux al cual volver. Por eso `main()` nunca termina: todos los programas acaban en `while (1)`.
 
-Importante: `linker.ld` dice **32 KB** y `Memory.v` tiene **8192 palabras × 4 bytes = 32 KB**. Si no coincidieran, el programa podría quedar en direcciones que no existen.
+## 2. Cómo llega el programa a la FPGA
 
-## 5. De binario a firmware.hex
-
-`objcopy -O binary` saca los **bytes puros** del programa, empezando en la dirección 0. Después `firmware/tools/bin2hex.py` los agrupa de a 4 en **palabras de 32 bits**, una por línea, que es el formato que lee `$readmemh`:
-
-```
-6c800113   ← palabra en la dirección 0x00: li sp, 1736   (primera instrucción de crt0.S)
-2c800513   ← palabra en la dirección 0x04: li a0, 712
-...
-```
-
-RISC-V es **little endian**: en `firmware.bin` los bytes aparecen en el orden `13 01 80 6c`, y forman la palabra `0x6c800113`. El script también completa con ceros hasta 8192 palabras y avisa cuánto ocupa el programa:
-
-```
-firmware.hex: 178 de 8192 palabras usadas (2.2 %)
-```
-
-## 6. Cómo llega el programa a la FPGA
-
-`Memory.v` tiene:
+La memoria del SoC (`soc/rtl/memory/Memory.v`, línea 24) se llena al arrancar con:
 
 ```verilog
-initial begin
-  $readmemh("firmware.hex", MEM);
-end
+$readmemh("firmware.hex", MEM);
 ```
 
 - En **simulación**, Icarus lee `firmware.hex` al empezar.
-- En **síntesis**, Yosys también lo lee y usa esos valores como **contenido inicial de la memoria de bloque (BRAM)**. El programa queda **dentro del bitstream**.
+- En **síntesis**, Yosys también lo lee y lo usa como **contenido inicial de la memoria de la FPGA**. El programa queda **dentro del bitstream**.
 
-Consecuencia práctica: **cada vez que cambian el programa en C hay que volver a sintetizar** (`make syn`) y configurar (`make config`). El `Makefile` lo detecta solo, porque el bitstream depende de `firmware.hex`.
+Consecuencia práctica: **cada vez que cambian el programa en C hay que volver a sintetizar** (`make syn`) y configurar la FPGA (`make config`). El `Makefile` lo detecta solo.
 
-## 7. Acceder a un periférico desde C: REG y volatile
+## 3. Acceder a un periférico desde C: REG y volatile
 
 En `soc/firmware/soc.h`:
 
 ```c
 #define REG(dir) (*(volatile uint32_t *)(dir))
-#define UART_DATO  REG(UART_BASE + 0x08)
+#define UART_DATO  REG(0x00400000 + 0x08)
 ```
 
-Leído de adentro hacia afuera:
+`REG(dir)` significa "**la variable que vive en la dirección `dir`**". Con eso, en el programa se escribe:
 
-1. `(volatile uint32_t *)(dir)`: convierte el número `dir` en un **puntero** a un entero de 32 bits.
-2. `*( ... )`: **desreferencia** el puntero, es decir, "la variable que vive en esa dirección".
+```c
+UART_DATO = 'H';      // el compilador lo convierte en un sw a la dirección 0x0040_0008
+x = UART_DATO;        // y esto, en un lw de esa dirección
+```
 
-Así `UART_DATO = 'A';` se compila como un `sw` a la dirección `0x0040_0008`, y `x = UART_DATO;` como un `lw`.
+Para el programa, un registro de un periférico parece una variable más. Es la E/S mapeada en memoria de [Fundamentos 02](02_Bus_y_perifericos.md) vista desde C.
 
 ### ¿Por qué `volatile`?
 
-El compilador optimiza suponiendo que **solo el programa** cambia la memoria. Con un periférico eso es falso: el hardware cambia los valores (un pulsador, un bit de "ocupado") y las escrituras tienen efectos (encender un LED). `volatile` le dice al compilador: **haz cada lectura y cada escritura exactamente como están escritas**.
+El compilador intenta ahorrar trabajo: si cree que una lectura o una escritura no sirve para nada, **la borra**. Con un periférico eso es un error, porque el hardware cambia los valores por su cuenta (un pulsador, un bit de "ocupado") y las escrituras tienen efectos (encender un LED).
 
-Este es el código real que genera el compilador **sin** `volatile` y **con** `volatile`:
+`volatile` le dice al compilador: **haz cada lectura y cada escritura exactamente como están escritas**. Por ejemplo:
 
 ```c
 while (1) { LEDS = 1; LEDS = 0; }
 ```
 
-```asm
-# SIN volatile: el compilador ve que nadie lee LEDS y BORRA las dos escrituras
-sin_volatile:
-   0:  j  0                       # bucle vacío: el LED nunca cambia
-
-# CON volatile: las dos escrituras se hacen siempre
-con_volatile:
-  28:  sw  a4, 0(a5)              # LEDS = 1
-  2c:  sw  zero, 0(a5)            # LEDS = 0
-  30:  j   28
-```
-
-Y una espera:
-
-```c
-while (!MULT_DONE) {}
-```
-
-```asm
-# SIN volatile: lee el registro UNA vez; si era 0, se queda en un bucle infinito
-   c:  lw    a5, 0(a5)
-  10:  bnez  a5, 18
-  14:  j     14                   # ← nunca vuelve a leer el periférico
-```
+- **Sin `volatile`**, el compilador ve que nadie lee `LEDS` y borra las dos escrituras: el LED nunca cambia.
+- **Con `volatile`**, hace las dos escrituras en cada vuelta: el LED parpadea.
 
 **Regla:** todo acceso a un periférico va con `volatile`. La macro `REG()` ya lo incluye.
 
-## 8. Cómo leer firmware.lst
+## 4. Cómo leer firmware.lst
 
 `build/firmware.lst` muestra cada línea de C seguida de las instrucciones que generó. Cada instrucción tiene tres columnas:
 
@@ -194,28 +100,38 @@ dirección:  código máquina    instrucción
       48:   00d72023          sw  a3,0(a4)
 ```
 
-Este es un trozo real de la función `imprimir` de `hola.c` (`uart_putc` quedó metida dentro de `imprimir`; el compilador hace eso con funciones cortas):
+- **dirección**: dónde está la instrucción en la memoria (el valor del PC cuando se ejecuta);
+- **código máquina**: la palabra de 32 bits que está en `firmware.hex`;
+- **instrucción**: la misma palabra, escrita para que la lea una persona.
+
+Este es un trozo real de la función `imprimir` de `hola.c`, que envía un texto letra por letra:
 
 ```
 00000028 <imprimir>:
-  28:  00400737   lui   a4,0x400        # a4 = 0x400 << 12      = 0x0040_0000
+  28:  00400737   lui   a4,0x400        # a4 = 0x0040_0000
   2c:  004007b7   lui   a5,0x400        # a5 = 0x0040_0000
   30:  00870713   addi  a4,a4,8         # a4 = 0x0040_0008  → UART_DATO
   34:  01078793   addi  a5,a5,16        # a5 = 0x0040_0010  → UART_CONTROL
-  38:  00100613   li    a2,1
-  3c:  00054683   lbu   a3,0(a0)        # a3 = siguiente carácter del texto
-  40:  00069463   bnez  a3,48           # si no es '\0', ir a enviarlo
+  38:  00100613   li    a2,1            # a2 = 1
+  3c:  00054683   lbu   a3,0(a0)        # a3 = siguiente letra del texto
+  40:  00069463   bnez  a3,48           # si no es el final del texto, ir a enviarla
   44:  00008067   ret                   # fin del texto: volver
-  48:  00d72023   sw    a3,0(a4)        # UART_DATO = carácter
-  4c:  00c7a023   sw    a2,0(a5)        # UART_CONTROL = 1  (transmitir)
+  48:  00d72023   sw    a3,0(a4)        # UART_DATO = letra
+  4c:  00c7a023   sw    a2,0(a5)        # UART_CONTROL = 1  (enviar)
+  50:  00150513   addi  a0,a0,1         # pasar a la siguiente letra
+  54:  0007a023   sw    zero,0(a5)      # UART_CONTROL = 0
+  58:  0007a683   lw    a3,0(a5)        # leer UART_CONTROL
+  5c:  2006f693   andi  a3,a3,512       # quedarse con el bit 9 (512 = 0x200): ¿ocupada?
   ...
 ```
 
-Así se construye una dirección de 32 bits en RISC-V: una instrucción no puede llevar una constante de 32 bits, así que se usa **`lui`** para los 20 bits altos y **`addi`** para los 12 bajos.
+No hace falta entender cada línea. Lo importante es ver **cómo una línea de C se vuelve un `sw` o un `lw` a la dirección de un periférico**:
 
-**Para la bitácora (Semana 1):** encuentren en su listado el `sw` que escribe un carácter en la UART, digan en qué registro está la dirección y cómo se calculó, y decodifiquen a mano su código máquina (ver [Fundamentos 01, sección 5](01_RISC-V_y_FemtoRV.md#5-cómo-se-codifica-una-instrucción-en-32-bits)).
+- Las direcciones de 32 bits se arman en dos pasos: `lui` pone la parte alta (`0x0040_0000`) y `addi` suma la baja (`+8`).
+- `sw a3,0(a4)` en la dirección `0x48` es el que envía la letra. Es el `sw` que vieron en GTKWave con la `H` (el procesador lo busca en la dirección `0x48` de la RAM).
+- `lw a3,0(a5)` en `0x58` es la pregunta "¿sigue ocupada?" del `while` de `uart_putc`.
 
-## 9. El compilador es más listo de lo que parece
+## 5. El compilador es más listo de lo que parece
 
 En `hola.c`, el producto "por software" se calcula con un bucle de 45 sumas:
 
@@ -234,17 +150,8 @@ Pero en `firmware.lst` **no hay ningún bucle**:
  118:  f51ff0ef   jal   68 <imprimir_dec>
 ```
 
-Como `a` y `b` son constantes conocidas al compilar, el compilador **hizo la cuenta él mismo** (123 × 45 = 5535) y dejó solo el resultado. Esto se llama *constant folding*.
+Como `a` y `b` son constantes conocidas al compilar, el compilador **hizo la cuenta él mismo** (123 × 45 = 5535) y dejó solo el resultado. Esto se llama *constant folding*. Si se declaran `volatile`, el compilador ya no puede suponer sus valores y el bucle aparece (Semana 1, Tarea 5.3).
 
-Lección para los experimentos: **un programa en C no siempre hace lo que parece**. Antes de medir el tiempo de algo, revisen en el listado qué instrucciones se ejecutan de verdad.
-
-## 10. Preguntas de autoevaluación
-
-1. ¿Por qué se necesita un compilador "cruzado"?
-2. ¿Qué pasaría si `crt0.S` no preparara el puntero de pila antes de llamar a `main()`?
-3. Si el programa crece a 40 KB, ¿qué archivo da el error y por qué?
-4. ¿Por qué cambiar una línea de C obliga a volver a sintetizar?
-5. Escriban la pareja `lui`/`addi` que pone `0x0041_0008` en el registro `a5`.
-6. ¿Qué haría el compilador con `while (!(GPIO_BOTONES & 1)) {}` si `GPIO_BOTONES` no fuera `volatile`?
+Lección para los experimentos: **un programa en C no siempre hace lo que parece**. Antes de medir cuánto tarda algo, revisen en el listado qué instrucciones se ejecutan de verdad.
 
 [← Volver a la guía](../README.md)
