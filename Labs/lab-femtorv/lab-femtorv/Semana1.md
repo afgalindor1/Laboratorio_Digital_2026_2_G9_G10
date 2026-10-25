@@ -8,14 +8,14 @@
 
 **Regla de trabajo:** en cada tarea que lo pida, **escriban la predicción en la bitácora antes de ejecutar el comando**. La predicción equivocada que se explica vale más que el resultado correcto copiado.
 
-| Tarea | Qué hacen | Tiempo estimado |
-|---|---|---|
-| [1](#tarea-1-el-blinker-desde-memoria) | Blinker desde memoria: predecir, simular, llevar a la tarjeta | 1 h |
-| [2](#tarea-2-el-primer-programa-en-el-femtorv) | Primer programa en el FemtoRV: simulación y tarjeta | 1 h |
-| [3](#tarea-3-el-mapa-de-memoria) | Mapa de memoria del SoC | 1 h 15 min |
-| [4](#tarea-4-el-femtorv-por-dentro-visto-de-lejos) | Reconocer el PC, la máquina de estados y el bus en el código del FemtoRV | 30 min |
-| [5](#tarea-5-de-una-línea-de-c-al-bus) | De una línea de C a una instrucción y al bus | 1 h |
-| [✓](#punto-de-control) | Punto de control al inicio de la semana 2 | 5 min |
+| Tarea | Qué hacen |
+|---|---|
+| [1](#tarea-1-el-blinker-desde-memoria) | Blinker desde memoria: predecir, simular, llevar a la tarjeta |
+| [2](#tarea-2-el-primer-programa-en-el-femtorv) | Primer programa en el FemtoRV: simulación y tarjeta |
+| [3](#tarea-3-el-mapa-de-memoria) | Mapa de memoria del SoC |
+| [4](#tarea-4-el-femtorv-por-dentro-visto-de-lejos) | Reconocer el PC, la máquina de estados y el bus en el código del FemtoRV |
+| [5](#tarea-5-de-una-línea-de-c-al-bus) | De una línea de C a una instrucción y al bus |
+| [✓](#punto-de-control) | Punto de control al inicio de la semana 2 |
 
 ---
 
@@ -105,7 +105,10 @@ Fin. El programa queda en un bucle infinito.
 === Fin: 155707 ciclos simulados, 145 caracteres recibidos, LEDS_EXT = 00000000 ===
 ```
 
-Anoten en la bitácora: cuántas palabras de la RAM ocupa el programa (línea `firmware.hex: … palabras usadas`) y cuántos ciclos se simularon.
+Anoten en la bitácora dos números que aparecen en la terminal:
+
+- **Cuántas palabras de la RAM ocupa el programa.** Sale al final de la compilación, antes de que empiece la simulación, en una línea como `firmware.hex: 177 de 8192 palabras usadas (2.2 %)`. La escribe `bin2hex.py` al crear `firmware.hex`: cuenta las palabras de 32 bits que tienen instrucciones o datos; el resto de la RAM queda en cero. Solo aparece cuando el programa se compila: si ya habían ejecutado `make sim` antes y no cambiaron el C, no se vuelve a compilar. Para verla otra vez: `make clean` y luego `make sim`.
+- **Cuántos ciclos de reloj se simularon.** Es el primer número de la última línea: `=== Fin: 155707 ciclos simulados …`. Lo cuenta el testbench desde el inicio hasta que la UART deja de enviar.
 
 ### 2.2 Modificar el programa
 
@@ -127,7 +130,10 @@ Al final de `make syn` aparece una tabla de recursos. **Guárdenla en la bitáco
 
 ### 2.4 Preguntas para la bitácora
 
-1. ¿Por qué el mismo programa produce la misma salida en la simulación y en la tarjeta, si en la simulación la UART es mucho más rápida? (Pista: lean el encabezado de `sim/tb_soc.v` y la función `uart_putc` en `firmware/soc.h`).
+1. ¿Por qué el mismo programa produce la misma salida en la simulación y en la tarjeta, si en la simulación la UART es mucho más rápida? Para responder, sigan estos tres pasos:
+   - ¿Dónde se fija la velocidad de la UART? Busquen `BAUD` en `sim/tb_soc.v` (simulación) y en `boards/tangnano9k/top_tangnano9k.v` o `boards/colorlight/top_colorlight.v` (tarjeta). ¿Está en el programa en C o en el hardware?
+   - En `firmware/soc.h`, la función `uart_putc` termina con un `while`. ¿Qué pregunta ese `while` una y otra vez, y cuándo sale de él?
+   - Con lo anterior: ¿el programa espera un tiempo fijo o espera a que la UART termine? ¿Por qué eso hace que funcione igual a cualquier velocidad?
 2. ¿Por qué cada cambio en `hola.c` obliga a ejecutar `make syn` otra vez? ([Fundamentos 03, sección 2](Fundamentos/03_De_C_a_la_FPGA.md#2-cómo-llega-el-programa-a-la-fpga)).
 
 ---

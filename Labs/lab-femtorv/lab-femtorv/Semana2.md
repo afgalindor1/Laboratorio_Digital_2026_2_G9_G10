@@ -8,15 +8,15 @@
 
 **El periférico:** un **GPIO** (*General Purpose Input/Output*, entradas y salidas de propósito general) con un registro de LEDs y uno de pulsadores, en la dirección base `0x0041_0000` (`cs[1]`, que hoy está libre). Es el periférico más sencillo posible, a propósito: el reto es la conexión con el procesador, no la lógica.
 
-| Tarea | Qué hacen | Tiempo estimado |
-|---|---|---|
-| [1](#tarea-1-especificar-el-periférico) | Especificar: tabla de registros y caja negra | 30 min |
-| [2](#tarea-2-describir-el-periférico-en-verilog) | Describir el periférico en Verilog | 45 min |
-| [3](#tarea-3-probar-el-periférico-solo) | Probarlo solo, con un testbench de bus | 1 h |
-| [4](#tarea-4-conectarlo-al-soc) | Conectarlo al SoC | 30 min |
-| [5](#tarea-5-el-programa-en-c) | Programa en C: simulación | 45 min |
-| [6](#tarea-6-en-la-tarjeta) | En la tarjeta | 45 min |
-| [7](#tarea-7-experimento-cuánto-cuesta-una-tarea-hecha-por-software) | Experimento: cuánto cuesta una tarea hecha por software | 1 h |
+| Tarea | Qué hacen |
+|---|---|
+| [1](#tarea-1-especificar-el-periférico) | Especificar: tabla de registros y caja negra |
+| [2](#tarea-2-describir-el-periférico-en-verilog) | Describir el periférico en Verilog |
+| [3](#tarea-3-probar-el-periférico-solo) | Probarlo solo, con un testbench de bus |
+| [4](#tarea-4-conectarlo-al-soc) | Conectarlo al SoC |
+| [5](#tarea-5-el-programa-en-c) | Programa en C: simulación |
+| [6](#tarea-6-en-la-tarjeta) | En la tarjeta |
+| [7](#tarea-7-experimento-cuánto-cuesta-una-tarea-hecha-por-software) | Experimento: cuánto cuesta una tarea hecha por software |
 
 ---
 

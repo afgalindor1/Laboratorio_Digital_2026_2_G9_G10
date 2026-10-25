@@ -22,6 +22,7 @@ Si algo falla en un paso, el error está en ese paso o en uno anterior, nunca en
 | `yosys: command not found`, `iverilog: command not found`… | No activaron el entorno en esta terminal | `source digital-logic-design activate` |
 | `nextpnr-himbaechel: command not found` | Versión vieja de OSS CAD Suite | Actualicen el entorno del curso (`digital-logic-design` del repositorio) |
 | `make: *** No rule to make target 'firmware/xxx.c'` | El nombre en `PROG=` no corresponde a un archivo | `PROG` va **sin** `.c`: `make sim PROG=gpio` |
+| `make: Warning: File 'Makefile' has modification time … in the future` o `Clock skew detected` | La fecha y hora del computador están mal (por ejemplo, desconfiguradas después de usar Windows en el mismo equipo) | Pongan la hora automática: `sudo timedatectl set-ntp true`, comprueben con `date` y, en la carpeta, `touch Makefile` o `make clean` |
 
 ## Compilación del programa en C
 
@@ -65,6 +66,7 @@ Si algo falla en un paso, el error está en ese paso o en uno anterior, nunca en
 | La terminal muestra caracteres sin sentido | Velocidad distinta en los dos lados | Tang Nano: `CLK_FREQ` debe ser 27 MHz en su top. La terminal debe estar a 115200 baudios (`make terminal` ya la pone) |
 | Funciona en simulación pero los LEDs no cambian | Cableado, pines o LEDs al revés; o no se volvió a sintetizar | Revisen polaridad del LED y pines de [Tarjetas.md](Tarjetas.md). Después de cambiar el C: `make syn` y `make config` |
 | Tang Nano: los LEDs se ven al revés | Se quitó la inversión del top | Los LEDs de la tarjeta son activos en bajo: el top usa `assign led = ~leds_soc[5:0];` |
+| `make config`: `fail to open build/tangnano9k.fs` (o `colorlight.bit`) | Se ejecutó `make clean`, que borra la carpeta `build` con el archivo de la tarjeta | Vuelvan a ejecutar `make syn BOARD=...` antes de `make config` |
 | Al apagar la tarjeta se pierde el diseño | `make config` es volátil | Usen `make config-flash` para que quede grabado |
 
 [← Volver a la guía](README.md)
