@@ -14,15 +14,26 @@ module uart #(
     input        tx_wr,
     output       tx_busy
 );
-  localparam integer DIVISOR = freq_hz / baud / 16;
-
-  // Baudrate generator (enable16)
-  reg [$clog2(DIVISOR):0] enable16_counter;
-  wire enable16 = (enable16_counter == 0);
+  // Generador de la velocidad (enable16: 16 pulsos por bit)
+  // Acumulador de fase: suma baud*16 en cada ciclo y da un pulso cada vez que
+  // pasa de freq_hz. Así la velocidad promedio es exacta aunque freq_hz no sea
+  // múltiplo de baud*16 (por ejemplo, 27 MHz a 115200 baudios). La versión
+  // anterior dividía con números enteros y a 27 MHz / 115200 se equivocaba un 4,6 %.
+  localparam integer BAUD16 = baud * 16;
+  reg [31:0] acumulador;
+  reg        enable16;
 
   always @(posedge clk) begin
-    if (reset) enable16_counter <= DIVISOR - 1;
-    else enable16_counter <= enable16 ? DIVISOR - 1 : enable16_counter - 1;
+    if (reset) begin
+      acumulador <= 0;
+      enable16   <= 0;
+    end else if (acumulador + BAUD16 >= freq_hz) begin
+      acumulador <= acumulador + BAUD16 - freq_hz;
+      enable16   <= 1;
+    end else begin
+      acumulador <= acumulador + BAUD16;
+      enable16   <= 0;
+    end
   end
 
   // Synchronize RXD

@@ -92,8 +92,13 @@ Cada semana empieza con una **charla de 30 minutos**; el resto del tiempo es tra
    python3 --version
    ```
    Si falta `riscv64-unknown-elf-gcc`, instálenlo con `sudo apt install gcc-riscv64-unknown-elf`.
-3. **Sepan qué tarjeta tienen** y lean [Tarjetas.md](Tarjetas.md). Las dos funcionan con los mismos archivos; solo cambia `BOARD=colorlight` o `BOARD=tangnano9k` en los comandos.
-4. **Lean los Fundamentos** en orden antes de cada semana (ver abajo). Las charlas los resumen; la guía supone que los leyeron.
+3. **Den permiso a su usuario para usar el puerto serie** (una sola vez por computador). Sin esto, `make terminal` falla con `cannot open /dev/ttyUSB…: Permission denied`:
+   ```bash
+   sudo usermod -aG dialout $USER
+   ```
+   Después **cierren sesión y vuelvan a entrar** (o reinicien). Comprueben con `groups`: debe aparecer `dialout`.
+4. **Sepan qué tarjeta tienen** y lean [Tarjetas.md](Tarjetas.md). Las dos funcionan con los mismos archivos; solo cambia `BOARD=colorlight` o `BOARD=tangnano9k` en los comandos.
+5. **Lean los Fundamentos** en orden antes de cada semana (ver abajo). Las charlas los resumen; la guía supone que los leyeron.
 
 ## Inicio rápido
 

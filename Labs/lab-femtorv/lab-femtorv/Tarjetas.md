@@ -89,6 +89,14 @@ make config-flash BOARD=tangnano9k    # permanente
 make terminal BOARD=tangnano9k
 ```
 
+### Lo que se comprobó en la tarjeta
+
+Probado con una Tang Nano 9K real: `hola.c` corre en la tarjeta y su mensaje aparece en `make terminal` al presionar S1.
+
+- **S1 (pin 4) es el reset** y **S2 (pin 3) es el pulsador de usuario**, como dice la tabla (se comprobó encendiendo un LED con cada botón).
+- **La UART va a 115200 baudios.** A 9600 baudios la FPGA transmitía (se comprobó con un LED conectado a TX), pero el chip USB de la tarjeta no entregaba nada al PC. El ejemplo oficial de Sipeed también usa 115200.
+- `make syn` tarda varios minutos y muestra avisos de Python (`Numpy is not available…`): son normales y no afectan el resultado.
+
 ### Cuidado con la frecuencia
 
 `soc/boards/tangnano9k/top_tangnano9k.v` le pasa al SoC `CLK_FREQ = 27_000_000`. Si se deja en 25 MHz (el valor de la Colorlight), la UART calcula mal su velocidad: el error es de casi el 8 % y en la terminal aparecen **caracteres sin sentido**.
@@ -128,6 +136,8 @@ Si `make config` o `make terminal` dicen *permission denied* o *unable to open d
 ```bash
 sudo usermod -aG dialout $USER     # acceso a los puertos serie; luego cierren sesión y vuelvan a entrar
 ```
+
+El error típico de `make terminal` es `FATAL: cannot open /dev/ttyUSB1: Permission denied`. El cambio de grupo solo vale después de cerrar sesión y volver a entrar; para probar de inmediato, `sudo chmod a+rw /dev/ttyUSB1` da permiso hasta que se desconecte la tarjeta.
 
 y ejecuten el script de permisos del repositorio del curso: `installTools/hw-permissions.sh`.
 

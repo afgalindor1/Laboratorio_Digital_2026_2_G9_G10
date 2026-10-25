@@ -24,7 +24,7 @@ module top_colorlight (
 
   SOC #(
       .CLK_FREQ(25_000_000),
-      .BAUD    (9600)
+      .BAUD    (115200)
   ) soc (
       .clk     (clk),
       .resetn  (resetn),

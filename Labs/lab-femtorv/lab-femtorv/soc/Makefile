@@ -70,7 +70,7 @@ help:
 	@echo "  make stats BOARD=...     Recursos usados y frecuencia máxima"
 	@echo "  make config BOARD=...    Configura la FPGA (volátil: se pierde al apagar)"
 	@echo "  make config-flash ...    Configura la memoria flash (permanente)"
-	@echo "  make terminal BOARD=...  Terminal serial a 9600 baudios (salir: Ctrl-a Ctrl-x)"
+	@echo "  make terminal BOARD=...  Terminal serial a 115200 baudios (salir: Ctrl-a Ctrl-x)"
 	@echo "  make clean               Borra los archivos generados"
 	@echo ""
 	@echo "  Otro programa:  make sim PROG=gpio    (usa firmware/gpio.c)"
@@ -176,7 +176,7 @@ stats:
 	@grep "Max frequency" $(B)/nextpnr.log | tail -1 | sed 's/Info://'
 
 terminal:
-	$(RUN) picocom -b 9600 $(PORT)
+	$(RUN) picocom -b 115200 $(PORT)
 
 clean:
 	rm -rf $(B) firmware.hex

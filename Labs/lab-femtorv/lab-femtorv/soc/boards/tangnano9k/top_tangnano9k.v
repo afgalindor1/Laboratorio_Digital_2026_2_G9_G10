@@ -24,7 +24,7 @@ module top_tangnano9k (
 
   SOC #(
       .CLK_FREQ(27_000_000),  // ¡Si se deja en 25 MHz, la UART envía basura!
-      .BAUD    (9600)
+      .BAUD    (115200)
   ) soc (
       .clk     (clk),
       .resetn  (btn_s1),

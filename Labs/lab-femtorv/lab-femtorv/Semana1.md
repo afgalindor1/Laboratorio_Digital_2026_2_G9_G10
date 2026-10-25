@@ -102,7 +102,7 @@ Por software (sumas repetidas): 5535
 Por hardware (periferico MULT): 5535
 Fin. El programa queda en un bucle infinito.
 
-=== Fin: 155708 ciclos simulados, 145 caracteres recibidos, LEDS_EXT = 00000000 ===
+=== Fin: 155707 ciclos simulados, 145 caracteres recibidos, LEDS_EXT = 00000000 ===
 ```
 
 Anoten en la bitácora: cuántas palabras de la RAM ocupa el programa (línea `firmware.hex: … palabras usadas`) y cuántos ciclos se simularon.

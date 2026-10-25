@@ -22,7 +22,7 @@
 // =============================================================================
 module SOC #(
     parameter CLK_FREQ = 25_000_000,  // Frecuencia del reloj en Hz (la fija cada tarjeta)
-    parameter BAUD     = 9600         // Velocidad de la UART en baudios
+    parameter BAUD     = 115200       // Velocidad de la UART en baudios
 ) (
     input        clk,       // Reloj del sistema
     input        resetn,    // Reset activo en bajo (0 = reiniciar)

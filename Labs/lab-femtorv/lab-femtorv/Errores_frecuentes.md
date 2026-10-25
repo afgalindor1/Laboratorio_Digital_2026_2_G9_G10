@@ -58,9 +58,11 @@ Si algo falla en un paso, el error está en ese paso o en uno anterior, nunca en
 | Síntoma | Causa probable | Solución |
 |---|---|---|
 | `unable to open ftdi device` / `permission denied` | Permisos de USB o cable mal conectado | Ver [Tarjetas.md, permisos](Tarjetas.md#permisos-en-linux) |
+| `make terminal`: `FATAL: cannot open /dev/ttyUSB1: Permission denied` | El usuario no pertenece al grupo `dialout` (pasa la primera vez en casi todos los computadores) | `sudo usermod -aG dialout $USER` y luego cerrar sesión y volver a entrar. Para probar ya, sin cerrar sesión: `sudo chmod a+rw /dev/ttyUSB1` (se pierde al desconectar la tarjeta) |
 | Colorlight: no se configura | Alimentación insuficiente o JTAG mal cableado | Fuente externa de 5 V; revisen TDI, TDO, TCK, TMS y GND |
+| No se puede salir de `make terminal` con `Ctrl-a` `Ctrl-x` | Están usando la terminal integrada de un editor (Lite XL, VS Code…), que se queda con `Ctrl-a` | Cierren esa pestaña de terminal, o ejecuten `pkill picocom` desde otra. Para `make terminal` usen la terminal normal del sistema |
 | La terminal no muestra nada | Puerto equivocado, TX/RX cruzados, falta GND, o no hubo reset | Prueben el otro `/dev/ttyUSB*`; TX de la FPGA va al RX del adaptador; presionen reset con la terminal abierta |
-| La terminal muestra caracteres sin sentido | Velocidad distinta en los dos lados | Tang Nano: `CLK_FREQ` debe ser 27 MHz en su top. La terminal debe estar a 9600 (`make terminal` ya la pone) |
+| La terminal muestra caracteres sin sentido | Velocidad distinta en los dos lados | Tang Nano: `CLK_FREQ` debe ser 27 MHz en su top. La terminal debe estar a 115200 baudios (`make terminal` ya la pone) |
 | Funciona en simulación pero los LEDs no cambian | Cableado, pines o LEDs al revés; o no se volvió a sintetizar | Revisen polaridad del LED y pines de [Tarjetas.md](Tarjetas.md). Después de cambiar el C: `make syn` y `make config` |
 | Tang Nano: los LEDs se ven al revés | Se quitó la inversión del top | Los LEDs de la tarjeta son activos en bajo: el top usa `assign led = ~leds_soc[5:0];` |
 | Al apagar la tarjeta se pierde el diseño | `make config` es volátil | Usen `make config-flash` para que quede grabado |
