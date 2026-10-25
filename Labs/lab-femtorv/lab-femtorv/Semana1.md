@@ -219,6 +219,14 @@ En `hola.c` el producto "por software" se calcula con un bucle `for` de 45 sumas
 2. Expliquen qué hizo el compilador ([Fundamentos 03, sección 9](Fundamentos/03_De_C_a_la_FPGA.md#9-el-compilador-es-más-listo-de-lo-que-parece)).
 3. ¿Por qué eso importa cuando se quiere **medir** cuánto tarda algo?
 
+Ahora impidan que el compilador haga la cuenta:
+
+4. En `hola.c` cambien `uint32_t a = 123, b = 45;` por `volatile uint32_t a = 123, b = 45;` y ejecuten `make sim`. Vuelvan a buscar el bucle en `firmware.lst`. ¿Cuántas palabras ocupa ahora el programa? ¿Qué instrucciones forman **una vuelta** del bucle y cuál de ellas es el salto que lo cierra?
+5. Con la tabla de ciclos del Quark ([Fundamentos 01, sección 8](Fundamentos/01_RISC-V_y_FemtoRV.md#8-la-máquina-de-estados-y-los-ciclos-por-instrucción)): 3 ciclos para ALU y saltos, 4 para `lw`/`sw`, estimen cuántos ciclos tarda la multiplicación por software (45 vueltas).
+6. Comparen los **ciclos simulados** de la última línea de `make sim` con y sin `volatile`. ¿La diferencia coincide con su estimación?
+
+Al terminar, dejen `hola.c` como estaba: `git restore firmware/hola.c`.
+
 ---
 
 ## Punto de control
