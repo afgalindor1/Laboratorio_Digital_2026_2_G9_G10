@@ -13,7 +13,7 @@ module peripheral_mult (
   input reset;
   input [31:0] d_in;
   input cs;
-  input [31:0] addr;  // 4 LSB from j1_io_addr
+  input [31:0] addr;  // el periférico solo usa addr[4:0]
   input rd;
   input wr;
   output reg [31:0] d_out;

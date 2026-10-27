@@ -150,7 +150,7 @@ Pero en `firmware.lst` **no hay ningún bucle**:
  118:  f51ff0ef   jal   68 <imprimir_dec>
 ```
 
-Como `a` y `b` son constantes conocidas al compilar, el compilador **hizo la cuenta él mismo** (123 × 45 = 5535) y dejó solo el resultado. Esto se llama *constant folding*. Si se declaran `volatile`, el compilador ya no puede suponer sus valores y el bucle aparece (Semana 1, Tarea 5.3).
+Como `a` y `b` son constantes conocidas al compilar, el compilador **hizo la cuenta él mismo** (123 × 45 = 5535) y dejó solo el resultado. Esto se llama *constant folding*. Si se declaran `volatile`, el compilador ya no puede suponer sus valores y el bucle aparece.
 
 Lección para los experimentos: **un programa en C no siempre hace lo que parece**. Antes de medir cuánto tarda algo, revisen en el listado qué instrucciones se ejecutan de verdad.
 

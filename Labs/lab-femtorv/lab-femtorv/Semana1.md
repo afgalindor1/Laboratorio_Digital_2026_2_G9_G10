@@ -342,22 +342,42 @@ Usen Ctrl+F para encontrar cada pieza y completen la tabla:
 
 ### 4.2 Preguntas
 
-1. En el estado `EXECUTE` (líneas 353 – 358), ¿entre qué valores escoge el siguiente PC? ¿Cuándo es `PC + 4` y cuándo es otro?
-2. Con el diagrama de estados de Fundamentos 01, expliquen por qué un `sw` tarda 4 ciclos y un `addi` tarda 3. (Pista: la línea 357 decide si pasa por `WAIT_ALU_OR_MEM`).
-3. Según la línea 218, ¿qué pone el procesador en `mem_addr` cuando está buscando una instrucción y qué pone cuando está ejecutando un `lw` o un `sw`?
-4. Comparen con el blinker de la tarea 1: ¿qué pieza del FemtoRV equivale a su contador y cuál a su lectura de la ROM?
+1. Según la línea 218, ¿qué pone el procesador en `mem_addr` cuando busca una instrucción y qué pone cuando ejecuta un `lw` o un `sw`? ¿Cuál de las dos es la que llega al `chip_select` cuando el programa escribe en la UART?
+2. Comparen con el blinker de la tarea 1: ¿qué pieza del FemtoRV equivale a su contador y cuál a su lectura de la ROM?
 
 ---
 
 ## Tarea 5. De una línea de C al bus
 
-### 5.1 Encontrar la instrucción
+En esta tarea no hay que buscar nada en el código: primero se explica qué hace el programa con la UART y después lo ven pasar en las formas de onda.
 
-Abran `soc/build/firmware.lst` y busquen la función `imprimir`. Guíense por la sección 4 de [Fundamentos 03](Fundamentos/03_De_C_a_la_FPGA.md#4-cómo-leer-firmwarelst):
+### 5.1 Cómo `imprimir` usa los registros de la UART
 
-1. Encuentren el `sw` que escribe una letra en el registro DATO de la UART. Anoten su **dirección** en el listado y su **código máquina**.
-2. ¿En qué registro del procesador está la dirección `0x0040_0008`? ¿Qué dos instrucciones la calcularon?
-3. Un poco más abajo hay un `lw` seguido de un `andi ...,512`. ¿Qué registro de la UART lee? ¿Por qué 512? (Pista: `UART_OCUPADA` en `soc.h`).
+En `soc.h`, `imprimir` envía un texto letra por letra con `uart_putc`. Esta es cada línea de C y las instrucciones que generó el compilador (están en `soc/build/firmware.lst`):
+
+| Línea de C (`uart_putc` en `soc.h`) | Instrucción | Qué hace en el bus |
+|---|---|---|
+| `UART_DATO = c;` | `sw a3,0(a4)` | **escribe** la letra en DATO (`0x0040_0008`) |
+| `UART_CONTROL = 1;` | `sw a2,0(a5)` | **escribe** 1 en CONTROL (`0x0040_0010`): "envíala" |
+| `UART_CONTROL = 0;` | `sw zero,0(a5)` | **escribe** 0 en CONTROL |
+| `while (UART_CONTROL & UART_OCUPADA)` | `lw a3,0(a5)` · `andi a3,a3,512` · `bnez ...` | **lee** CONTROL y mira el bit 9 (512 = 2⁹): "¿sigues ocupada?" |
+
+Las direcciones de DATO y CONTROL quedaron guardadas en los registros `a4` y `a5` del procesador desde el comienzo de la función.
+
+```mermaid
+flowchart LR
+    A["sw: escribir la letra<br/>en DATO"] --> B["sw: escribir 1<br/>en CONTROL"]
+    B --> C["lw: leer CONTROL<br/>¿bit 9 = 1?"]
+    C -- "sí, ocupada" --> C
+    C -- "no" --> D["siguiente letra"]
+```
+
+Lo importante son dos ideas, y son las que van a usar en la semana 2:
+
+- **Un `sw` a una dirección es escribir en un registro del periférico.** Aquí la letra va a DATO. En la semana 2, un `sw` a `0x0041_0004` pondrá un patrón en sus LEDs.
+- **Un `lw` de una dirección es leer un registro del periférico.** Aquí se lee CONTROL para saber si la UART terminó. En la semana 2, un `lw` de `0x0041_0008` leerá los pulsadores.
+
+> La espera ("¿sigues ocupada?") solo hace falta en periféricos que tardan en terminar, como la UART o el multiplicador. Su GPIO responde de inmediato: no la necesita.
 
 ### 5.2 Verlo en las formas de onda
 
@@ -366,7 +386,7 @@ make sim ARGS=+vcd     # guarda los primeros 20 000 ciclos
 make wave
 ```
 
-En GTKWave, dentro de `tb_soc` → `uut`, agreguen: `clk`, `mem_addr`, `mem_wdata`, `mem_wmask`, `mem_rstrb`, `cs` y, dentro de `CPU`, `state`.
+En GTKWave, dentro de `tb_soc` → `uut`, agreguen: `clk`, `mem_addr`, `mem_wdata`, `mem_wmask`, `cs` y, dentro de `CPU`, `state`.
 
 Tres ajustes para leer mejor las ondas:
 
@@ -374,29 +394,26 @@ Tres ajustes para leer mejor las ondas:
 - Si `clk` se ve como una línea plana, están demasiado cerca: alejen la vista con la lupa con signo menos hasta ver unos 200 ns.
 - `state` muestra `1`, `2`, `4` u `8`: son los estados BUSCAR, ESPERAR, EJECUTAR y ESPERAR MEMORIA de [Fundamentos 01](Fundamentos/01_RISC-V_y_FemtoRV.md#6-la-máquina-de-estados-del-femtorv).
 
-**Antes de buscar, escriban su predicción** de los valores de `mem_wdata`, `mem_wmask`, `cs` y `state` en el ciclo en que el procesador escribe la primera letra. Luego:
+Busquen el **primer** ciclo en que `mem_addr = 00400008` y `mem_wmask = 1111` (puede aparecer como `F`), cerca de los 2 800 ns. Es la escritura de la primera letra en DATO. Deberían ver:
 
-1. Busquen el **primer** ciclo en que `mem_addr = 00400008` y `mem_wmask = 1111` (puede aparecer como `F`). ¿Qué valor tiene `mem_wdata`? ¿A qué carácter ASCII corresponde?
-2. En ese ciclo, ¿qué vale `cs`? ¿Coincide con su mapa de memoria?
-3. ¿En qué estado está el CPU? ¿Cuántos ciclos después vuelve a `FETCH_INSTR`?
-4. Unos ciclos antes verán `mem_addr = 00000048` con `cs` en la RAM. ¿Qué está haciendo el procesador en ese momento? (No es la letra: comparen con la dirección del `sw` de la tarea 5.1).
-5. Hagan una captura de pantalla con el cursor en el ciclo de la escritura y explíquenla en la bitácora, señal por señal. Comparen con el diagrama de la sección 5 de [Fundamentos 02](Fundamentos/02_Bus_y_perifericos.md#5-una-escritura-y-una-lectura-vistas-en-la-simulación).
+| Señal | Valor | Qué significa |
+|---|---|---|
+| `mem_addr` | `00400008` | la dirección de DATO |
+| `mem_wdata` | `00000048` | la letra `'H'` en ASCII |
+| `mem_wmask` | `1111` | es una escritura de 4 bytes |
+| `cs` | `0000001` | el `chip_select` eligió la UART (`cs[0]`) |
+| `state` | `4` | el procesador está en EJECUTAR |
 
-### 5.3 ¿Dónde está el bucle?
+Hagan una **captura de pantalla** con el cursor en ese ciclo y, en la bitácora, expliquen con sus palabras cada señal. Comparen con el diagrama de la sección 5 de [Fundamentos 02](Fundamentos/02_Bus_y_perifericos.md#5-una-escritura-y-una-lectura-vistas-en-la-simulación).
 
-En `hola.c` el producto "por software" se calcula con un bucle `for` de 45 sumas. Búsquenlo en `firmware.lst` dentro de `main`.
+### 5.3 Para saber: software contra hardware
 
-1. ¿Encuentran el bucle? ¿Qué encuentran en su lugar?
-2. Expliquen qué hizo el compilador ([Fundamentos 03, sección 5](Fundamentos/03_De_C_a_la_FPGA.md#5-el-compilador-es-más-listo-de-lo-que-parece)).
-3. ¿Por qué eso importa cuando se quiere **medir** cuánto tarda algo?
+`hola.c` calcula 123 × 45 de dos formas:
 
-Ahora impidan que el compilador haga la cuenta:
+- **Por software:** un bucle `for` que suma 45 veces. Lo hace el procesador, instrucción por instrucción.
+- **Por hardware:** `mult_hw()` escribe A y B en el multiplicador, le da la orden en INIT, espera DONE y lee RESULT. Son unos pocos `sw` y `lw`: el trabajo lo hace el periférico.
 
-4. En `hola.c` cambien `uint32_t a = 123, b = 45;` por `volatile uint32_t a = 123, b = 45;` y ejecuten `make sim`. Vuelvan a buscar el bucle en `firmware.lst`. ¿Cuántas palabras ocupa ahora el programa? ¿Qué instrucciones forman **una vuelta** del bucle y cuál de ellas es el salto que lo cierra?
-5. Con la tabla de ciclos del Quark ([Fundamentos 01, sección 6](Fundamentos/01_RISC-V_y_FemtoRV.md#cuántos-ciclos-tarda-cada-instrucción)): 3 ciclos para ALU y saltos, 4 para `lw`/`sw`, estimen cuántos ciclos tarda la multiplicación por software (45 vueltas).
-6. Comparen los **ciclos simulados** de la última línea de `make sim` con y sin `volatile`. ¿La diferencia coincide con su estimación?
-
-Al terminar, dejen `hola.c` como estaba: `git restore firmware/hola.c`.
+Un detalle: como `a` y `b` son constantes, el compilador hace la cuenta antes de compilar y el bucle desaparece del programa ([Fundamentos 03, sección 5](Fundamentos/03_De_C_a_la_FPGA.md#5-el-compilador-es-más-listo-de-lo-que-parece)). Cuánto cuesta de verdad una tarea hecha por software lo van a medir en el experimento de la semana 2.
 
 ---
 
@@ -416,6 +433,6 @@ Si algo no funciona, revisen [Errores_frecuentes.md](Errores_frecuentes.md) y ll
 - Tarea 2: salida de la simulación con su mensaje, tabla de recursos de la síntesis, respuestas.
 - Tarea 3: las dos tablas y las respuestas.
 - Tarea 4: la tabla de las tres piezas y las respuestas.
-- Tarea 5: el `sw` y el `lw` de `imprimir`, captura de GTKWave explicada, respuestas.
+- Tarea 5: captura de GTKWave de la escritura de la primera letra, explicada señal por señal.
 
 [← Volver a la guía](README.md) · [Semana 2 →](Semana2.md)

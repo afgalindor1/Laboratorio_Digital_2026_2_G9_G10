@@ -119,7 +119,7 @@ flowchart LR
     B1 -- "no" --> B5["0x130<br/>seguir"]
 ```
 
-Este dibujo es el bucle `for` de `hola.c` cuando se compila con `volatile` (Semana 1, Tarea 5.3): una comparación que decide si entrar y un salto que vuelve al inicio.
+Este dibujo es el bucle `for` de `hola.c` cuando se compila con `volatile`: una comparación que decide si entrar y un salto que vuelve al inicio.
 
 ## 5. Las pocas instrucciones que van a leer
 
@@ -196,7 +196,7 @@ De la máquina de estados sale cuánto tarda cada instrucción:
 | Cuentas (`addi`, `add`, `lui`…) y saltos (`beq`, `bltu`, `j`, `jal`…) | Buscar → Esperar → Ejecutar | **3** |
 | Acceso a memoria (`lw`, `sw`) | Buscar → Esperar → Ejecutar → Esperar memoria | **4** |
 
-Con el listado del compilador y esta tabla pueden **predecir** cuánto tarda un trozo de programa. Lo harán en la Semana 1 (Tarea 5.3) y en el experimento de la Semana 2.
+Con el listado del compilador y esta tabla pueden **predecir** cuánto tarda un trozo de programa. Lo verán en el experimento de la Semana 2.
 
 > **Por qué hay un multiplicador como periférico:** el Quark no tiene instrucción de multiplicar. Si un programa en C usa `*`, el compilador lo reemplaza por una rutina de sumas y desplazamientos que tarda decenas o cientos de ciclos. Por eso el SoC trae un multiplicador hecho en hardware.
 

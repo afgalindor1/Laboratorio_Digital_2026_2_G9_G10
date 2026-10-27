@@ -74,12 +74,19 @@ module tb_perip_gpio;
     escribir(32'h0041_0004, 32'hA5);
     comprobar("salida leds", leds, 8'hA5);
 
-    // COMPLETAR: agregue una prueba por cada especificación de su tabla de registros:
-    //   - leer LEDS devuelve lo que se escribió
-    //   - leer BOTONES devuelve el valor de los pulsadores (cambie 'botones' antes)
-    //   - una escritura a BOTONES no cambia nada
-    //   - una escritura con cs = 0 (otra dirección, ej. 0x0042_0004) no cambia los LEDs
-    //   - los bits no usados se leen en 0
+    // 1. Leer LEDS devuelve lo que se escribió (los bits altos en 0)
+    leer(32'h0041_0004, valor);
+    comprobar("leer LEDS", valor, 32'h0000_00A5);
+
+    // 2. Leer BOTONES devuelve los pulsadores
+    botones = 4'b1001;
+    leer(32'h0041_0008, valor);
+    comprobar("leer BOTONES", valor, 32'h0000_0009);
+
+    // COMPLETAR: escriba las pruebas 3, 4 y 5 con el mismo modelo.
+    // 3. Escribir en BOTONES (0x0041_0008) no cambia los LEDs: comprobar leds
+    // 4. Escribir en otro periférico (0x0042_0004) no cambia los LEDs: comprobar leds
+    // 5. Leer una dirección sin registro (0x0041_000C) devuelve 0: comprobar valor
 
     $display("--- %0d errores ---", errores);
     $finish;
