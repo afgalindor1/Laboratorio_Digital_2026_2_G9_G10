@@ -32,6 +32,8 @@ Completen la tabla. Las dos primeras columnas ya están decididas; el resto lo d
 | `0x0041_0008` | `+0x08` | BOTONES | | | | | | |
 | cualquier otra `0x0041_xxxx` | — | — | | | | | | |
 
+> **Si un dato solo es válido un tiempo, la tabla debe decirlo.** Ejemplo: el registro RESULT del multiplicador se borra unos 30 ciclos después de que DONE vale 1; por eso `mult_hw()` en `soc.h` lo lee apenas termina la espera. En su GPIO, ¿algún registro tiene una condición así?
+
 ### 1.2 Caja negra
 
 Dibujen el periférico como una caja con todas sus entradas y salidas, el ancho en bits de cada una y de dónde viene o a dónde va (del CPU, del `chip_select`, de los pines). Los puertos son los de `plantillas/perip_gpio.v`.

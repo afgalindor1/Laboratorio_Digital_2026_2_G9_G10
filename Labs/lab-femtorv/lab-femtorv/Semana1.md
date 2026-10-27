@@ -321,10 +321,8 @@ Comprueben al final que sus direcciones coinciden con los `#define` de `soc/firm
 
 ### 3.3 Preguntas
 
-1. ¿Cuántos bits de la dirección mira `chip_select.v` y cuántos mira cada periférico para elegir sus registros?
-2. ¿Por qué la RAM es el caso `default` del `case` y no tiene un valor propio?
-3. Si el programa escribe en `0x0043_0000`, ¿qué bloque recibe la escritura? ¿Y qué obtiene si lee de esa dirección?
-4. El multiplicador borra su resultado unos 30 ciclos después de `DONE` (estado `END` de `soc/rtl/mult/mult.v`, líneas 81 – 85: `done` vale 1 mientras `count` no pase de 29, y luego la máquina vuelve a `START`). ¿Cómo debería decirlo su tabla de registros? ¿Por qué `mult_hw()` en `soc.h` sí funciona?
+1. ¿Cuántos bits de la dirección mira `chip_select.v` para elegir el bloque, y cuántos mira cada periférico para elegir su registro?
+2. Hoy, si el programa escribe en `0x0041_0004`, ¿qué señal `cs` se activa y quién recibe la escritura? ¿Y qué obtiene si lee de esa dirección? (Revisen la línea 88 de `SOC.v`). En la semana 2 ese espacio será el de su periférico.
 
 ---
 

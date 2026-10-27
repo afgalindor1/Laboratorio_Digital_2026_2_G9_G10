@@ -167,6 +167,7 @@ $(error BOARD debe ser colorlight o tangnano9k)
 endif
 
 syn: $(BITSTREAM)
+	@echo "Bitstream listo: $(BITSTREAM)  (si no cambió nada, make no vuelve a sintetizar)"
 
 stats:
 	@echo ""
