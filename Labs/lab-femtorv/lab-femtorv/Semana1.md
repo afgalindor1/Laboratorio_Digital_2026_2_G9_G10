@@ -213,7 +213,30 @@ Completen la tabla siguiendo los mismos cinco pasos:
 
 **Archivos:** `soc/rtl/uart/perip_uart.v` y `soc/rtl/mult/perip_mult.v`.
 
-La misma dirección llega completa a dos lugares, y **cada uno mira una parte distinta**:
+**Para qué sirve esta parte.** La UART y el multiplicador son dos periféricos que **ya están conectados** al mapa de memoria. No hay que diseñarlos: hay que **abrirlos y ver cómo leen y escriben datos por dentro**. Es el modelo exacto del periférico que van a diseñar en la semana 2 (y de los de la consola). Todo periférico responde a las mismas tres preguntas:
+
+1. **¿Qué registro me piden?** Un *decodificador* mira los bits bajos de la dirección.
+2. **¿Qué hago cuando el procesador escribe?** Guardo el dato en ese registro, si `cs` y `wr` valen 1.
+3. **¿Qué devuelvo cuando el procesador lee?** Pongo ese registro en `d_out`, si `cs` y `rd` valen 1.
+
+#### Dónde están los registros
+
+Cada bloque de la tabla 3.1 ocupa 65 536 direcciones, pero solo usa unas pocas: una por registro. La dirección de un registro es la **base del bloque** más un **desplazamiento**:
+
+```mermaid
+flowchart LR
+    subgraph UART["Bloque UART · 0x0040_xxxx · cs[0]"]
+        direction TB
+        U1["0x0040_0008 · DATO<br/>(base + 0x08)"] ~~~ U2["0x0040_0010 · CONTROL<br/>(base + 0x10)"]
+    end
+    subgraph MULT["Bloque multiplicador · 0x0042_xxxx · cs[2]"]
+        direction TB
+        M1["0x0042_0004 · A<br/>(base + 0x04)"] ~~~ M2["0x0042_0008 · B<br/>(base + 0x08)"] ~~~ M3["0x0042_000C · INIT<br/>(base + 0x0C)"] ~~~ M4["0x0042_0010 · RESULT<br/>(base + 0x10)"] ~~~ M5["0x0042_0014 · DONE<br/>(base + 0x14)"]
+    end
+    UART ~~~ MULT
+```
+
+La misma dirección llega completa a dos lugares, y **cada uno mira una parte distinta**: `chip_select.v` elige el bloque con los bits altos, y el periférico elige el registro con los bits bajos.
 
 ```mermaid
 flowchart LR
@@ -222,18 +245,16 @@ flowchart LR
     CS -->|"cs = 1: el acceso es para la UART"| P
 ```
 
-Un periférico solo responde si su `cs` vale 1. Dentro de él, un **decodificador interno** mira los bits bajos de la dirección para elegir el **registro**.
-
 #### Cómo leer un periférico: seguir las señales
 
-Al abrir `perip_uart.v` aparecen señales como `wr`, `cs`, `d_in` o `sel`. **Cuando no sepan qué es una señal, búsquenla** (Ctrl+F en Lite XL; F3 salta a la siguiente coincidencia) hasta encontrar de dónde viene:
+Al abrir un periférico aparecen señales como `wr`, `cs`, `d_in` o `sel`. **Cuando no sepan qué es una señal, búsquenla** (Ctrl+F en Lite XL; F3 salta a la siguiente coincidencia) hasta encontrar de dónde viene:
 
 1. Si está en la cabecera del módulo como `input`, viene de afuera: búsquenla en `SOC.v`, donde se conecta el periférico.
 2. Si no es una entrada, nace adentro: busquen dónde se le asigna un valor.
 
 Ejemplo con `wr`: en `perip_uart.v` es `input wr` (línea 11) → en `SOC.v` la UART se conecta con `.wr(wr)` (línea 128) → y `wr` nace en `SOC.v` línea 64: `wire wr = |mem_wmask;` (el `|` es un OR de los 4 bits: vale 1 si hay escritura).
 
-| Señal en el periférico | De dónde viene (en `SOC.v`) | Qué es |
+| Señal en el periférico | De dónde viene (UART: `SOC.v`) | Qué es |
 |---|---|---|
 | `cs` | `.cs(cs_uart)`, línea 125 → línea 73 | 1 si la dirección es de este periférico |
 | `wr` | `.wr(wr)`, línea 128 → línea 64 | 1 si el procesador está **escribiendo** |
@@ -241,35 +262,60 @@ Ejemplo con `wr`: en `perip_uart.v` es `input wr` (línea 11) → en `SOC.v` la 
 | `addr` | `.addr(mem_addr)`, línea 126 | La dirección completa |
 | `d_in` | `.d_in(mem_wdata)`, línea 124 | El dato que escribe el procesador |
 | `d_out` | `.d_out(uart_dout)`, línea 129 → va a `chip_select` | Lo que el periférico responde cuando se le lee |
-| `sel` | Nace dentro de `perip_uart.v` (decodificador, líneas 128 – 140) | Qué registro se eligió |
 
-Abreviaturas que van a ver en casi cualquier diseño: `wr` = *write* (escribir) · `rd` = *read* (leer) · `d_in` / `d_out` = *data in* / *data out* · `sel` = *select* · `cs` = *chip select* · `tx` / `rx` = transmitir / recibir.
+El multiplicador recibe las mismas señales (su conexión está en `SOC.v`, líneas 144 – 153). Abreviaturas que van a ver en casi cualquier diseño: `wr` = *write* (escribir) · `rd` = *read* (leer) · `d_in` / `d_out` = *data in* / *data out* · `sel` o `s` = *select* · `cs` = *chip select* · `tx` / `rx` = transmitir / recibir.
 
-#### Las zonas de `perip_uart.v`
+#### La UART por dentro: `perip_uart.v`
 
-| Líneas | Zona | Qué hace |
+| Líneas | Pregunta que responde | Qué hace |
 |---|---|---|
-| 26 | Corte de la dirección | `.addr(addr[4:0])`: el decodificador recibe solo los **5 bits bajos** |
-| 134 – 138 | Decodificador | `5'h08` → `sel = 01` (registro en `+0x08`); `5'h10` → `sel = 10` (registro en `+0x10`). Solo si `cs = 1` |
-| 157 – 163 | Escritura | `if (sel[0] && wr)` guarda el byte a enviar; `if (sel[1] && wr)` guarda `uart_ctrl`. Para saber qué hace cada bit de `uart_ctrl`, busquen `uart_ctrl[` (líneas 61, 63 y 162) |
-| 165 – 171 | Lectura | Qué se pone en `d_out` según `sel` |
+| 26 y 134 – 138 | ¿Qué registro? | El decodificador recibe solo los **5 bits bajos** de la dirección (`addr[4:0]`). `5'h08` → `sel = 01` (DATO); `5'h10` → `sel = 10` (CONTROL). Solo si `cs = 1` |
+| 157 – 163 | ¿Qué guardo al escribir? | `if (sel[0] && wr)` guarda el byte a enviar; `if (sel[1] && wr)` guarda `uart_ctrl`. Para saber qué hace cada bit de `uart_ctrl`, busquen `uart_ctrl[` (líneas 61, 63 y 162) |
+| 165 – 171 | ¿Qué devuelvo al leer? | Pone en `d_out` lo que corresponde según `sel` |
 
 En la línea 168 aparecen llaves: `{22'b0, tx_busy, rx_avail, rx_error, 7'b0}`. Las llaves **pegan bits uno al lado del otro**; lo que está más a la izquierda queda en los bits más altos. Para saber en qué bit queda cada señal, **cuenten desde la derecha**: `7'b0` ocupa los bits 0 a 6, así que `rx_error` queda en el bit 7, y así sucesivamente.
 
-**Ejemplo resuelto: el registro de dato de la UART**
+**Ejemplo resuelto: el registro DATO de la UART**
 
 - **Dirección completa:** base del bloque `0x0040_0000` + `0x08` (línea 135) = `0x0040_0008`.
 - **Al escribir** (línea 158): guarda `d_in[7:0]`, los 8 bits bajos, en `d_in_uart`, que va al transmisor como `tx_data` (línea 62): **el byte a enviar**.
 - **Al leer** (línea 167): devuelve `{24'b0, rx_data}`: **el último byte recibido**, en los bits [7:0].
 
-Completen la tabla. La UART tiene 2 registros y el multiplicador 5 (`perip_mult.v`: decodificador en las líneas 31 – 38, escritura en 52 – 56, lectura en 64 – 68):
+#### El multiplicador por dentro: `perip_mult.v`
+
+Responde a las mismas tres preguntas, pero está **escrito de otra forma**. Eso también es parte de lo que hay que aprender: lo importante son las tres partes, no el estilo con que se escriben.
+
+| Líneas | Pregunta que responde | Qué hace |
+|---|---|---|
+| 29 – 40 | ¿Qué registro? | Si `cs = 1`, compara `addr[4:0]` con `04`, `08`, `0C`, `10` y `14`, y enciende un bit de `s` (5 bits, uno por registro) |
+| 45 – 59 | ¿Qué guardo al escribir? | Si `cs && wr`, guarda en A, B o `init` según el bit de `s` que esté en 1. Fíjense en **cuántos bits de `d_in`** guarda cada uno |
+| 62 – 70 | ¿Qué devuelvo al leer? | Si `cs && rd`, pone en `d_out` el resultado o el bit `done` |
+| 75 – 83 | El trabajo propio | Conecta A, B e `init` al circuito que multiplica (`mult.v`), y recibe de él `result` y `done` |
+
+Diferencias con la UART que conviene notar:
+
+| | UART | Multiplicador |
+|---|---|---|
+| Decodificador | Un módulo aparte, `peripheral_uart_addr_decoder`, que produce `sel` (2 bits) | Dentro del mismo módulo; produce `s` (5 bits, un bit por registro) |
+| Escritura | `if (sel[0] && wr) d_in_uart <= ...` | `A = s[0] ? d_in[15:0] : A;` (un `? :` por registro, con `=`) |
+| Lectura | Actualiza `d_out` siempre que la dirección sea suya | Solo actualiza `d_out` si además `rd = 1` |
+| Leer un registro que no se puede leer | — | Devuelve el **último valor** que tuvo `d_out`, no 0 (el `case` de lectura no tiene `default`) |
+
+> El comentario de la línea 16 (`// 4 LSB from j1_io_addr`) quedó de otro proyecto: el decodificador usa **5** bits, `addr[4:0]`. Lean el código, no solo los comentarios.
+
+#### Completen la tabla
+
+Las direcciones y los nombres ya están, como guía. Ustedes completan si cada registro se puede leer, escribir o las dos cosas, y qué significan sus bits:
 
 | Dirección completa | Periférico | Nombre | Lectura / Escritura | Qué significan sus bits |
 |---|---|---|---|---|
 | `0x0040_0008` | UART | DATO | Las dos | **Escribir:** bits [7:0] = byte a enviar. **Leer:** bits [7:0] = último byte recibido |
-| | UART | CONTROL | | |
-| | MULT | | | |
-| … | | | | |
+| `0x0040_0010` | UART | CONTROL | | |
+| `0x0042_0004` | MULT | A | | |
+| `0x0042_0008` | MULT | B | | |
+| `0x0042_000C` | MULT | INIT | | |
+| `0x0042_0010` | MULT | RESULT | | |
+| `0x0042_0014` | MULT | DONE | | |
 
 Comprueben al final que sus direcciones coinciden con los `#define` de `soc/firmware/soc.h`.
 
@@ -278,7 +324,7 @@ Comprueben al final que sus direcciones coinciden con los `#define` de `soc/firm
 1. ¿Cuántos bits de la dirección mira `chip_select.v` y cuántos mira cada periférico para elegir sus registros?
 2. ¿Por qué la RAM es el caso `default` del `case` y no tiene un valor propio?
 3. Si el programa escribe en `0x0043_0000`, ¿qué bloque recibe la escritura? ¿Y qué obtiene si lee de esa dirección?
-4. El multiplicador borra su resultado unos 30 ciclos después de `DONE` (estado `END` de `soc/rtl/mult/mult.v`). ¿Cómo debería decirlo su tabla de registros? ¿Por qué `mult_hw()` en `soc.h` sí funciona?
+4. El multiplicador borra su resultado unos 30 ciclos después de `DONE` (estado `END` de `soc/rtl/mult/mult.v`, líneas 81 – 85: `done` vale 1 mientras `count` no pase de 29, y luego la máquina vuelve a `START`). ¿Cómo debería decirlo su tabla de registros? ¿Por qué `mult_hw()` en `soc.h` sí funciona?
 
 ---
 
