@@ -3,11 +3,11 @@
 //
 // El programa enciende y apaga el LED 0 lo más rápido que puede.
 //
-// ANTES de medir:
-//   1. make firmware PROG=parpadeo
-//   2. Abra build/firmware.lst y busque el bucle while(1): cuente sus instrucciones.
-//   3. Prediga la frecuencia de la señal en el LED (vea Semana2.md, experimento).
-// DESPUÉS: mida con el osciloscopio o el analizador lógico y compare.
+// Experimento opcional (Semana2.md, paso L2):
+//   1. Calcule la frecuencia de la señal del LED 0 con la tabla de ciclos de la
+//      guía (el bucle se ve en build/firmware.lst después de make firmware PROG=parpadeo).
+//   2. make syn PROG=parpadeo BOARD=...  y  make config BOARD=...
+//   3. Mida con el osciloscopio o el analizador lógico y compare.
 // =============================================================================
 #include "soc.h"
 

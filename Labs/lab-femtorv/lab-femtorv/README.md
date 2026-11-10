@@ -32,7 +32,7 @@ Al terminar, el grupo será capaz de:
 
 1. Explicar la **E/S mapeada en memoria**: el procesador solo lee y escribe direcciones, y un periférico es un circuito que responde en algunas de ellas.
 2. Construir el **mapa de memoria** del SoC leyendo su código: qué bloque atiende cada dirección y qué registro hay dentro de cada bloque.
-3. **Conectar un periférico propio** al mapa de memoria, probarlo con un testbench y controlarlo desde un programa en C.
+3. **Conectar un periférico** al mapa de memoria, agregarle un registro, probarlo con un testbench y controlarlo desde un programa en C: la receta que usarán con el periférico de la consola.
 4. Explicar, a nivel general, cómo funciona un procesador: un PC que recorre una memoria, el ciclo **buscar → decodificar → ejecutar** y la diferencia entre **RISC-V** (el conjunto de instrucciones) y el **FemtoRV** (el circuito que lo ejecuta).
 5. Seguir el camino de una línea de C hasta el bus: compilador, `firmware.hex`, la instrucción `sw` o `lw` y las señales que se ven en la simulación.
 6. **Predecir y medir** cuánto tarda una tarea hecha por software, y usar ese dato para decidir qué va en hardware y qué en software.
@@ -43,7 +43,7 @@ Al terminar, el grupo será capaz de:
 lab-femtorv/
 ├── README.md               ← esta guía
 ├── Semana1.md              ← tareas de la semana 1, paso a paso
-├── Semana2.md              ← tareas de la semana 2, paso a paso
+├── Semana2.md              ← semana 2: conectar un periférico, paso a paso
 ├── Tarjetas.md             ← Colorlight 5A-75E y Tang Nano 9K: conexiones y diferencias
 ├── Errores_frecuentes.md   ← síntomas, causas y soluciones
 ├── Fundamentos/
@@ -61,7 +61,7 @@ lab-femtorv/
 │   ├── firmware/           ← programas en C: soc.h, hola.c, gpio.c, parpadeo.c
 │   ├── boards/             ← top y pines de cada tarjeta
 │   └── Makefile
-└── plantillas/             ← Semana 2: plantillas del periférico y de su testbench
+└── plantillas/             ← Semana 2: el periférico GPIO y su testbench
 ```
 
 ## Plan de las dos semanas
@@ -71,7 +71,7 @@ Cada semana empieza con una **charla de 30 minutos**; el resto del tiempo es tra
 | | Charla (30 min) | Trabajo del grupo | Entrega |
 |---|---|---|---|
 | **Semana 1** | *Del contador al procesador*: qué es RISC-V, cómo funciona el FemtoRV, E/S mapeada en memoria | [Semana1.md](Semana1.md): blinker desde memoria, primer programa en C, mapa de memoria, lectura del procesador y del listado | **Punto de control** al inicio de la semana 2 (5 min por grupo) |
-| **Semana 2** | *Del procesador al periférico*: el bus, anatomía de un periférico, cómo se prueba | [Semana2.md](Semana2.md): periférico GPIO, testbench, programa en C, tarjeta, experimento de tiempo | **Bitácora, repositorio y sustentación** al inicio de la sesión siguiente |
+| **Semana 2** | *Conectar un periférico*: cómo se prueba y cómo se conecta al mapa de memoria | [Semana2.md](Semana2.md): ejemplo guiado con un GPIO (probarlo, conectarlo y usarlo desde C), agregarle un registro siguiendo la receta, tarjeta y experimento opcional | **Bitácora, repositorio y sustentación** al inicio de la sesión siguiente |
 
 **Punto de control de la semana 1.** Cada grupo muestra en su computador: (1) la simulación del SoC imprimiendo su mensaje, (2) su mapa de memoria completo y (3) responde una pregunta sobre una dirección del mapa. Sirve para detectar a tiempo problemas de instalación.
 
@@ -137,8 +137,8 @@ Lectura obligatoria. Están escritos para alguien que **nunca ha visto un proces
 
 | Entregable | Contenido |
 |---|---|
-| **Bitácora grupal** | Las respuestas y tablas de [Semana1.md](Semana1.md) y [Semana2.md](Semana2.md): predicciones, mapa de memoria, tabla de registros, capturas de simulación comentadas, experimento con predicción, medición y análisis. Sigue el formato de bitácora del curso. |
-| **Repositorio en GitHub Classroom** | La carpeta `soc/` con su `perip_gpio.v`, su testbench, el `SOC.v` modificado, sus programas en C y un README corto. Commits que muestren el proceso. |
+| **Bitácora grupal** | Las respuestas y tablas de [Semana1.md](Semana1.md) y [Semana2.md](Semana2.md): predicciones, mapa de memoria, tablas de registros, capturas de simulación comentadas, los cambios de `SOC.v` explicados y, si lo hicieron, el experimento del parpadeo. Sigue el formato de bitácora del curso. |
+| **Repositorio en GitHub Classroom** | La carpeta `soc/` con su `perip_gpio.v` (con el registro INVERTIR), su testbench, el `SOC.v` modificado, sus programas en C y un README corto. Commits que muestren el proceso. |
 | **Sustentación** | Demostración en la tarjeta y un **cambio en vivo** (ver Evaluación). |
 
 ## Evaluación
@@ -146,11 +146,11 @@ Lectura obligatoria. Están escritos para alguien que **nunca ha visto un proces
 | Criterio | Qué se revisa |
 |---|---|
 | **Habilitantes** | Asistencia, punto de control de la semana 1 aprobado, commits realizados y justificados |
-| **Comprensión del procesador** | Predicción del blinker, ubicación del PC y de la máquina de estados en el FemtoRV, cálculo de ciclos por instrucción |
-| **Comprensión del SoC** | Mapa de memoria correcto y explicado; lectura de `firmware.lst` (de una línea de C a una instrucción `sw`) |
-| **Periférico** | Tabla de registros completa; Verilog sintetizable y trazable a la tabla; testbench que comprueba cada registro |
+| **Comprensión del procesador** | Predicción del blinker; ubicación del PC, de la máquina de estados y de la interfaz de memoria (`mem_addr`) en el FemtoRV |
+| **Comprensión del SoC** | Mapa de memoria correcto y explicado; de una línea de C a un `sw` o `lw` en el bus (captura de GTKWave explicada) |
+| **Periférico** | Los cuatro cambios de `SOC.v` explicados; el registro INVERTIR en el Verilog, trazable a su tabla; testbench con sus pruebas y 0 errores |
 | **Software** | Programa en C funcional en simulación y en la tarjeta |
-| **Experimento** | Predicción razonada, medición con instrumento y explicación de la diferencia |
+| **Experimento** (opcional) | Cálculo razonado, medición con instrumento y explicación de la diferencia |
 | **Sustentación** | Preguntas sobre su diseño y un **cambio en vivo**, por ejemplo: mover el periférico a otra dirección (`0x0043_0000`), agregar un registro, o cambiar el patrón de LEDs. El grupo debe hacerlo y explicarlo en la sesión. |
 | **Valor agregado** | Integrar como periférico mapeado en memoria el controlador del laboratorio anterior (servo, tonos, ultrasonido…) y manejarlo desde C |
 

@@ -59,7 +59,7 @@ Completen la columna "simulación" de la tabla y comprueben las respuestas 3 y 5
 
 ### 1.3 Llevar a la tarjeta
 
-Conecten los LEDs según [Tarjetas.md](Tarjetas.md) (en la Tang Nano se usan los de la tarjeta).
+Conecten los LEDs según el diagrama de [Tarjetas.md](Tarjetas.md#conexiones) (en la Tang Nano se usan los de la tarjeta). En la Colorlight pueden montar de una vez los 6 LEDs y los 2 pulsadores del diagrama: es el mismo montaje de la semana 2.
 
 ```bash
 make syn BOARD=colorlight        # o BOARD=tangnano9k
@@ -126,7 +126,7 @@ make terminal BOARD=colorlight    # salir: Ctrl-a y luego Ctrl-x
 
 Con la terminal abierta, presionen el botón de reset de la tarjeta: el mensaje debe aparecer de nuevo.
 
-Al final de `make syn` aparece una tabla de recursos. **Guárdenla en la bitácora**: la van a comparar en la semana 2 con el SoC que tenga su periférico.
+Al final de `make syn` aparece una tabla de recursos: cuántos LUT, flip-flops y bloques de memoria ocupa el SoC. Guárdenla en la bitácora.
 
 ### 2.4 Preguntas para la bitácora
 
@@ -213,7 +213,7 @@ Completen la tabla siguiendo los mismos cinco pasos:
 
 **Archivos:** `soc/rtl/uart/perip_uart.v` y `soc/rtl/mult/perip_mult.v`.
 
-**Para qué sirve esta parte.** La UART y el multiplicador son dos periféricos que **ya están conectados** al mapa de memoria. No hay que diseñarlos: hay que **abrirlos y ver cómo leen y escriben datos por dentro**. Es el modelo exacto del periférico que van a diseñar en la semana 2 (y de los de la consola). Todo periférico responde a las mismas tres preguntas:
+**Para qué sirve esta parte.** La UART y el multiplicador son dos periféricos que **ya están conectados** al mapa de memoria. No hay que diseñarlos: hay que **abrirlos y ver cómo leen y escriben datos por dentro**. Es el modelo del periférico que van a conectar y ampliar en la semana 2 (y de los de la consola). Todo periférico responde a las mismas tres preguntas:
 
 1. **¿Qué registro me piden?** Un *decodificador* mira los bits bajos de la dirección.
 2. **¿Qué hago cuando el procesador escribe?** Guardo el dato en ese registro, si `cs` y `wr` valen 1.

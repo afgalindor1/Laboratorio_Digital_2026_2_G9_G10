@@ -39,9 +39,13 @@ Si algo falla en un paso, el error está en ese paso o en uno anterior, nunca en
 |---|---|---|
 | La simulación termina en `2000000 ciclos simulados, 0 caracteres recibidos` | El programa no llega a imprimir: se quedó esperando algo | Busquen un `while` que espere un periférico (por ejemplo `MULT_DONE`) con una dirección equivocada. Simulen con `ARGS=+vcd` y miren `mem_addr` |
 | `0 caracteres` aun con `hola.c` sin cambios | Compilaron a mano sin `-DBENCH` | Usen `make sim`: agrega `-DBENCH`, que inicializa registros internos del CPU |
-| Error de Icarus en `perip_gpio.v` con `COMPLETAR` | Quedan partes sin completar en la plantilla | Completen todas las marcas `/* COMPLETAR */` |
+| Error de Icarus en `perip_gpio.v` después de la Parte B | Falta un `;`, un `end` o un paréntesis en lo que agregaron | El mensaje dice la línea; comparen con el código de LEDS que está justo arriba |
+| `build/tb_gpio.vvp: No such file or directory` | No existe la carpeta `build/` (por ejemplo, después de `make clean`) | `mkdir -p build` dentro de `soc/` |
+| `warning: Port 3 (chip1_dout) of chip_select expects 32 bits, got 1` | Falta declarar `wire [31:0] gpio_dout;`: si un cable no se declara, Verilog lo crea de 1 bit | Cambio 1 de la Semana 2, paso A3 |
 | `Unknown module type: perip_gpio` | El archivo no está en `soc/rtl/` o se llama distinto | El archivo debe ser `soc/rtl/perip_gpio.v`: el `Makefile` agrega solo los `rtl/perip_*.v` |
-| `LEDS_EXT = 00000000` aunque el programa escribe en los LEDs | No borraron `assign LEDS_EXT = 8'b0;` o no conectaron `.leds(LEDS_EXT)` | Revisen los 4 cambios de la Semana 2, tarea 4 |
+| `LEDS_EXT` sale con `x` (por ejemplo `00x0x0x0`) | No borraron `assign LEDS_EXT = 8'b0;`: dos fuentes manejan el mismo cable | Cambio 3 de la Semana 2, paso A3 |
+| `LEDS_EXT = 00000000` aunque el programa escribe en los LEDs | No conectaron `.leds(LEDS_EXT)`, o las direcciones de `gpio.c` siguen en `0x00` | Cambio 4 del paso A3 y paso A4 |
+| `leds` sale `x` en el testbench después de la Parte B | Falta poner `invertir` en 0 en el reset | Lugar 2 de la Parte B |
 | Leer un registro del periférico devuelve siempre 0 | `chip1_dout` sigue en `32'b0`, o el desplazamiento del `#define` no coincide con el del Verilog | Conecten `.chip1_dout(gpio_dout)`; comparen la tabla de registros con el código C y el Verilog |
 | El multiplicador devuelve 0 | Se leyó `RESULT` mucho después de `DONE` | Lean el resultado inmediatamente después del `while (!MULT_DONE)`, como `mult_hw()` |
 | GTKWave no muestra el ciclo que busco | El VCD solo guarda los primeros 20 000 ciclos | Cambien `DUMP_CICLOS` en `sim/tb_soc.v` (archivos más grandes y lentos) |

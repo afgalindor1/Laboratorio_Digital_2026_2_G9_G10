@@ -37,7 +37,7 @@ Los archivos que intervienen:
 | Archivo | Qué es | ¿Lo modifican? |
 |---|---|---|
 | `firmware/hola.c` (y los demás `.c`) | Su programa | Sí |
-| `firmware/soc.h` | Las direcciones de los periféricos y funciones para usarlos (`imprimir`, `mult_hw`…) | En la semana 2, para agregar las de su periférico |
+| `firmware/soc.h` | Las direcciones de los periféricos y funciones para usarlos (`imprimir`, `mult_hw`…) | En la semana 2 se usa su `GPIO_BASE` y la macro `REG()` |
 | `firmware/crt0.S` | Lo primero que ejecuta el procesador al arrancar: prepara lo necesario y llama a `main()` | No |
 | `firmware/linker.ld` | Le dice al compilador que la memoria es de 32 KB y empieza en la dirección 0 | No |
 | `firmware.hex` | El contenido de la memoria (lo genera el `Makefile`) | No |

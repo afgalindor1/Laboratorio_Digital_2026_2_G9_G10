@@ -57,7 +57,7 @@ Un **SoC** (*System on Chip*, sistema en un chip) es el procesador junto con su 
 | **RAM** | Memoria de 32 KB | Guarda el programa (las instrucciones) y sus variables |
 | **UART** | Puerto serial: envía y recibe bytes, un bit tras otro, por un solo cable | Que el programa le escriba texto al PC (la terminal) |
 | **Multiplicador** | Circuito que multiplica dos números de 16 bits | El procesador no tiene instrucción de multiplicar: se la delega a este periférico |
-| **GPIO** (semana 2) | *General Purpose Input/Output*: un registro para LEDs y otro para pulsadores | Es el periférico que ustedes diseñan |
+| **GPIO** (semana 2) | *General Purpose Input/Output*: un registro para LEDs y otro para pulsadores | El periférico de ejemplo que conectan al SoC |
 | **chip_select** | Decodificador de direcciones | Decide qué bloque atiende cada acceso |
 
 ```mermaid

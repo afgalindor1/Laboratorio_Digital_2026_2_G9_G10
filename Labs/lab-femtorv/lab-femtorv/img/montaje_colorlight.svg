@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520" font-family="Helvetica, Arial, sans-serif">
+<rect width="900" height="520" fill="#FFFFFF"/>
+<text x="20" y="32" font-size="20" font-weight="700" fill="#16202E">Montaje en la Colorlight 5A-75E: 6 LEDs y 2 pulsadores</text>
+
+<!-- Tarjeta -->
+<rect x="20" y="60" width="250" height="430" rx="8" fill="#EEF3FA" stroke="#1F4E8C" stroke-width="2"/>
+<text x="145" y="88" font-size="16" font-weight="700" text-anchor="middle" fill="#1F4E8C">Colorlight</text>
+
+<!-- J1 -->
+<rect x="150" y="110" width="120" height="110" fill="#FFFFFF" stroke="#1F4E8C" stroke-width="1.5"/>
+<text x="210" y="130" font-size="14" font-weight="700" text-anchor="middle" fill="#1F4E8C">J1 (entradas)</text>
+<text x="40" y="168" font-size="13" fill="#16202E">BOTONES[0]</text>
+<text x="40" y="208" font-size="13" fill="#16202E">BOTONES[1]</text>
+<text x="215" y="168" font-size="13" text-anchor="middle" fill="#16202E">E4</text>
+<text x="215" y="208" font-size="13" text-anchor="middle" fill="#16202E">D3</text>
+
+<!-- J2 -->
+<rect x="150" y="250" width="120" height="225" fill="#FFFFFF" stroke="#1F4E8C" stroke-width="1.5"/>
+<text x="210" y="270" font-size="14" font-weight="700" text-anchor="middle" fill="#1F4E8C">J2 (salidas)</text>
+<g font-size="13" fill="#16202E">
+<text x="40" y="303">LEDS[0]</text><text x="215" y="303" text-anchor="middle">F3</text>
+<text x="40" y="333">LEDS[1]</text><text x="215" y="333" text-anchor="middle">F5</text>
+<text x="40" y="363">LEDS[2]</text><text x="215" y="363" text-anchor="middle">G3</text>
+<text x="40" y="393">LEDS[3]</text><text x="215" y="393" text-anchor="middle">G4</text>
+<text x="40" y="423">LEDS[4]</text><text x="215" y="423" text-anchor="middle">H3</text>
+<text x="40" y="453">LEDS[5]</text><text x="215" y="453" text-anchor="middle">H4</text>
+</g>
+
+<!-- Pulsadores -->
+<g stroke="#16202E" stroke-width="2" fill="none">
+<line x1="270" y1="164" x2="400" y2="164"/>
+<line x1="400" y1="164" x2="420" y2="150"/>
+<line x1="425" y1="164" x2="560" y2="164"/>
+<line x1="408" y1="146" x2="428" y2="146"/>
+<line x1="418" y1="146" x2="418" y2="138"/>
+<line x1="270" y1="204" x2="400" y2="204"/>
+<line x1="400" y1="204" x2="420" y2="190"/>
+<line x1="425" y1="204" x2="560" y2="204"/>
+<line x1="408" y1="186" x2="428" y2="186"/>
+<line x1="418" y1="186" x2="418" y2="178"/>
+<line x1="560" y1="164" x2="560" y2="230"/>
+<line x1="560" y1="204" x2="560" y2="204"/>
+</g>
+<text x="300" y="155" font-size="12" fill="#6B7280">pulsador</text>
+<text x="300" y="195" font-size="12" fill="#6B7280">pulsador</text>
+<!-- GND pulsadores -->
+<g stroke="#16202E" stroke-width="2">
+<line x1="545" y1="230" x2="575" y2="230"/><line x1="550" y1="236" x2="570" y2="236"/><line x1="555" y1="242" x2="565" y2="242"/>
+</g>
+<text x="585" y="240" font-size="13" fill="#16202E">GND</text>
+<text x="600" y="168" font-size="13" fill="#16202E">sin resistencia:</text>
+<text x="600" y="186" font-size="13" fill="#16202E">el pin tiene pull-up interna</text>
+
+<!-- LEDs -->
+<g stroke="#16202E" stroke-width="2" fill="none">
+<line x1="270" y1="299" x2="330" y2="299"/><rect x="330" y="291" width="50" height="16" fill="#FFFFFF"/><line x1="380" y1="299" x2="440" y2="299"/>
+<line x1="270" y1="329" x2="330" y2="329"/><rect x="330" y="321" width="50" height="16" fill="#FFFFFF"/><line x1="380" y1="329" x2="440" y2="329"/>
+<line x1="270" y1="359" x2="330" y2="359"/><rect x="330" y="351" width="50" height="16" fill="#FFFFFF"/><line x1="380" y1="359" x2="440" y2="359"/>
+<line x1="270" y1="389" x2="330" y2="389"/><rect x="330" y="381" width="50" height="16" fill="#FFFFFF"/><line x1="380" y1="389" x2="440" y2="389"/>
+<line x1="270" y1="419" x2="330" y2="419"/><rect x="330" y="411" width="50" height="16" fill="#FFFFFF"/><line x1="380" y1="419" x2="440" y2="419"/>
+<line x1="270" y1="449" x2="330" y2="449"/><rect x="330" y="441" width="50" height="16" fill="#FFFFFF"/><line x1="380" y1="449" x2="440" y2="449"/>
+</g>
+<g fill="#F5C542" stroke="#16202E" stroke-width="1.5">
+<polygon points="440,290 440,308 458,299"/><polygon points="440,320 440,338 458,329"/><polygon points="440,350 440,368 458,359"/>
+<polygon points="440,380 440,398 458,389"/><polygon points="440,410 440,428 458,419"/><polygon points="440,440 440,458 458,449"/>
+</g>
+<g stroke="#16202E" stroke-width="2">
+<line x1="458" y1="290" x2="458" y2="308"/><line x1="458" y1="320" x2="458" y2="338"/><line x1="458" y1="350" x2="458" y2="368"/>
+<line x1="458" y1="380" x2="458" y2="398"/><line x1="458" y1="410" x2="458" y2="428"/><line x1="458" y1="440" x2="458" y2="458"/>
+<line x1="458" y1="299" x2="560" y2="299"/><line x1="458" y1="329" x2="560" y2="329"/><line x1="458" y1="359" x2="560" y2="359"/>
+<line x1="458" y1="389" x2="560" y2="389"/><line x1="458" y1="419" x2="560" y2="419"/><line x1="458" y1="449" x2="560" y2="449"/>
+<line x1="560" y1="299" x2="560" y2="475"/>
+<line x1="545" y1="475" x2="575" y2="475"/><line x1="550" y1="481" x2="570" y2="481"/><line x1="555" y1="487" x2="565" y2="487"/>
+</g>
+<text x="355" y="285" font-size="12" text-anchor="middle" fill="#6B7280">330 Ω</text>
+<text x="449" y="282" font-size="12" text-anchor="middle" fill="#6B7280">LED</text>
+<text x="585" y="485" font-size="13" fill="#16202E">GND</text>
+<text x="600" y="320" font-size="13" fill="#16202E">pin → 330 Ω → ánodo del LED</text>
+<text x="600" y="338" font-size="13" fill="#16202E">cátodo → GND</text>
+<text x="600" y="356" font-size="13" fill="#16202E">(1 = encendido)</text>
+
+<text x="600" y="420" font-size="13" font-weight="700" fill="#B5471B">GND común con la tarjeta.</text>
+<text x="600" y="438" font-size="13" font-weight="700" fill="#B5471B">Pines a 3,3 V: nunca 5 V.</text>
+</svg>

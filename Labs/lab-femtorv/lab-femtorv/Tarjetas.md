@@ -32,6 +32,8 @@ El pinout completo está en el repositorio del curso: `fpga-example/colorlight-5
 
 ### Conexiones
 
+![Montaje en la Colorlight](img/montaje_colorlight.svg)
+
 | Qué | Pin de la FPGA | Conector | Cómo se conecta |
 |---|---|---|---|
 | UART TX (FPGA → PC) | C4 | J1 | al **RX** del adaptador USB-serial |
@@ -103,11 +105,11 @@ Probado con una Tang Nano 9K real: `hola.c` corre en la tarjeta y su mensaje apa
 
 ### Solo hay un pulsador de usuario
 
-S1 se usa como reset, así que solo queda S2 para `BOTONES[0]`. `BOTONES[1]` vale siempre 0. Para probar el patrón del segundo pulsador pueden usar la simulación (`ARGS="+botones=2"`), o agregar un pulsador externo con el procedimiento de la siguiente sección.
+S1 se usa como reset, así que solo queda S2 para `BOTONES[0]`. `BOTONES[1]` vale siempre 0. El programa de la semana 2 solo usa el pulsador 0, así que esto no lo afecta. Si más adelante necesitan otro pulsador, pueden probarlo en la simulación (`ARGS="+botones=2"`) o agregar uno externo con el procedimiento de la siguiente sección.
 
 ### Medir una señal o agregar un pin
 
-Los LEDs están soldados en la tarjeta. Para medir con el osciloscopio (Semana 2, tarea 7) hay dos opciones:
+Los LEDs están soldados en la tarjeta. Para medir con el osciloscopio (Semana 2, experimento L2) hay dos opciones:
 
 **Opción A (recomendada): sacar la señal a un pin del conector.**
 
@@ -137,8 +139,8 @@ Si `make config` o `make terminal` dicen *permission denied* o *unable to open d
 sudo usermod -aG dialout $USER     # acceso a los puertos serie; luego cierren sesión y vuelvan a entrar
 ```
 
-El error típico de `make terminal` es `FATAL: cannot open /dev/ttyUSB1: Permission denied`. El cambio de grupo solo vale después de cerrar sesión y volver a entrar; para probar de inmediato, `sudo chmod a+rw /dev/ttyUSB1` da permiso hasta que se desconecte la tarjeta.
+El error típico de `make terminal` es `FATAL: cannot open /dev/ttyUSB1: Permission denied`. El cambio de grupo solo vale después de cerrar sesión y volver a entrar (compruébenlo con `groups`: debe aparecer `dialout`); para probar de inmediato, `sudo chmod a+rw /dev/ttyUSB1` da permiso hasta que se desconecte la tarjeta.
 
-y ejecuten el script de permisos del repositorio del curso: `installTools/hw-permissions.sh`.
+Si el problema es con `make config`, ejecuten también el script de permisos del repositorio del curso: `installTools/hw-permissions.sh`.
 
 [← Volver a la guía](README.md)

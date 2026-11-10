@@ -1,43 +1,49 @@
 // =============================================================================
-// gpio.c — PLANTILLA del programa de la Semana 2
+// gpio.c — Programa de la Semana 2: usar el periférico GPIO desde C
 //
-// Objetivo: los LEDs muestran un patrón que depende del pulsador presionado.
-// Complete las partes marcadas con  COMPLETAR  y ejecute:
-//   make sim PROG=gpio ARGS="+botones=1"
+// Parte A (paso A4): completen las dos direcciones (COMPLETAR) según la tabla
+//          de registros. Si quieren, cambien los dos patrones de LEDs.
+// Parte B (paso B3): en las dos líneas marcadas con  PARTE B , quiten el
+//          comentario y completen la dirección de INVERTIR.
+//
+//   make sim PROG=gpio ARGS="+botones=1"     (+botones=N fija los pulsadores)
 //   make syn PROG=gpio BOARD=...
 // =============================================================================
 #include "soc.h"
 
-// COMPLETAR: direcciones de los registros según SU tabla de registros
-#define GPIO_LEDS     REG(GPIO_BASE + 0x00 /* COMPLETAR */)
-#define GPIO_BOTONES  REG(GPIO_BASE + 0x00 /* COMPLETAR */)
+// Direcciones de los registros (base 0x0041_0000 + desplazamiento)
+#define GPIO_LEDS      REG(GPIO_BASE + 0x00 /* COMPLETAR */)
+#define GPIO_BOTONES   REG(GPIO_BASE + 0x00 /* COMPLETAR */)
+// PARTE B: #define GPIO_INVERTIR  REG(GPIO_BASE + /* COMPLETAR */)
+
+// Patrones de los LEDs (6 bits: los LEDs que tiene la tarjeta)
+#define PATRON_SUELTO     0x07   // ningún pulsador:  000111  (cámbienlo si quieren)
+#define PATRON_PULSADO    0x2A   // pulsador 0:       101010  (cámbienlo si quieren)
 
 int main(void) {
   imprimir("Semana 2: periferico GPIO\r\n");
 
-  // Prueba 1: escribir un valor y leerlo de vuelta
+  // Prueba 1: escribir un valor en LEDS y leerlo de vuelta (un sw y un lw)
   GPIO_LEDS = 0x2A;
   imprimir("LEDS = ");
   imprimir_hex(GPIO_LEDS);
   imprimir("\r\n");
 
-  // Prueba 2: leer los pulsadores
+  // Prueba 2: leer los pulsadores (un lw)
   imprimir("BOTONES = ");
   imprimir_hex(GPIO_BOTONES);
   imprimir("\r\n");
 
-  // Bucle principal (polling): leer los pulsadores y decidir el patrón
+  // Bucle principal: leer los pulsadores y decidir qué mostrar
   while (1) {
     uint32_t b = GPIO_BOTONES;
 
-    // COMPLETAR: elija un patrón distinto para cada caso, por ejemplo:
-    //   ningún pulsador -> 0b000001
-    //   pulsador 0      -> 0b010101
-    //   pulsador 1      -> 0b101010
-    if (b == 0) {
-      GPIO_LEDS = 0x01;
-    } else {
-      GPIO_LEDS = 0x00; /* COMPLETAR */
-    }
+    if (b & 1)
+      GPIO_LEDS = PATRON_PULSADO;
+    else
+      GPIO_LEDS = PATRON_SUELTO;
+
+    // PARTE B: mientras el pulsador 0 esté presionado, INVERTIR vale 1
+    // GPIO_INVERTIR = b & 1;
   }
 }
