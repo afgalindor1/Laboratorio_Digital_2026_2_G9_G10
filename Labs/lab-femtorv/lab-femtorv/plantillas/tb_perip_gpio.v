@@ -1,8 +1,5 @@
 // =============================================================================
-// tb_perip_gpio.v — Testbench del periférico GPIO (Semana 2)
-//
-// Ya está completo para LEDS y BOTONES. En la Parte B agregan la prueba del
-// registro INVERTIR en el lugar marcado con  PARTE B .
+// tb_perip_gpio.v — PLANTILLA de testbench del periférico GPIO (Semana 2, Modo Jefe Final)
 //
 // Prueba el periférico SOLO, sin el procesador. Las tareas escribir() y leer()
 // imitan lo que hace el FemtoRV en el bus. Si el periférico falla aquí, el
@@ -11,7 +8,7 @@
 // Copie este archivo a soc/sim/tb_perip_gpio.v. Para simular, desde soc/:
 //   iverilog -g2012 -o build/tb_gpio.vvp sim/tb_perip_gpio.v rtl/perip_gpio.v
 //   vvp -n build/tb_gpio.vvp
-//   gtkwave build/tb_perip_gpio.vcd &
+//   gtkwave build/tb_perip_gpio.vcd
 // =============================================================================
 `timescale 1ns / 1ns
 
@@ -32,9 +29,7 @@ module tb_perip_gpio;
   always #20 clk = ~clk;  // 25 MHz
 
   // ---------------------------------------------- Tareas que imitan al CPU ---
-  // Escritura (como un sw): dirección y dato presentes durante un flanco de
-  // reloj con wr = 1. cs vale 1 solo si la dirección es 0x0041_xxxx: es lo que
-  // haría el chip_select del SoC.
+  // Escritura: dirección y dato presentes durante un flanco de reloj con wr = 1
   task escribir(input [31:0] direccion, input [31:0] dato);
     begin
       @(negedge clk);
@@ -44,8 +39,7 @@ module tb_perip_gpio;
     end
   endtask
 
-  // Lectura (como un lw): rd = 1 durante un flanco; el dato queda en d_out
-  // después del flanco y se copia en la variable de salida.
+  // Lectura: rd = 1 durante un flanco; el dato queda en d_out después del flanco
   task leer(input [31:0] direccion, output [31:0] dato);
     begin
       @(negedge clk);
@@ -80,40 +74,19 @@ module tb_perip_gpio;
     escribir(32'h0041_0004, 32'hA5);
     comprobar("salida leds", leds, 8'hA5);
 
-    // Leer LEDS devuelve lo que se escribió (bits altos en 0)
+    // 1. Leer LEDS devuelve lo que se escribió (los bits altos en 0)
     leer(32'h0041_0004, valor);
     comprobar("leer LEDS", valor, 32'h0000_00A5);
 
-    // Solo se guardan los 8 bits bajos
-    escribir(32'h0041_0004, 32'hFFFF_FF3C);
-    comprobar("LEDS tras escribir FFFFFF3C", leds, 8'h3C);
-
-    // Leer BOTONES
+    // 2. Leer BOTONES devuelve los pulsadores
     botones = 4'b1001;
     leer(32'h0041_0008, valor);
     comprobar("leer BOTONES", valor, 32'h0000_0009);
 
-    // Escribir en BOTONES no cambia los LEDs
-    escribir(32'h0041_0008, 32'h0000_00FF);
-    comprobar("LEDS tras escribir en BOTONES", leds, 8'h3C);
-
-    // Una escritura a otro periférico (cs = 0) no cambia los LEDs
-    escribir(32'h0042_0004, 32'h0000_0011);
-    comprobar("LEDS tras escribir en 0x00420004", leds, 8'h3C);
-
-    // Dirección sin registro: se lee 0
-    leer(32'h0041_0010, valor);
-    comprobar("leer 0x00410010", valor, 32'h0);
-
-    // PARTE B: prueba del registro INVERTIR (0x0041_000C).
-    //   1. Escribir 1 en INVERTIR y comprobar que leds sale invertido
-    //      (en este punto LEDS vale 3C; invertido es C3).
-    //   2. Leer 0x0041_000C y comprobar que devuelve 1.
-    //   3. Escribir 0 en INVERTIR y comprobar que leds vuelve a 3C.
-
-    // Reset apaga los LEDs
-    reset = 1; @(negedge clk); reset = 0;
-    comprobar("LEDS tras reset", leds, 8'h00);
+    // COMPLETAR: escriba las pruebas 3, 4 y 5 con el mismo modelo.
+    // 3. Escribir en BOTONES (0x0041_0008) no cambia los LEDs: comprobar leds
+    // 4. Escribir en otro periférico (0x0042_0004) no cambia los LEDs: comprobar leds
+    // 5. Leer una dirección sin registro (0x0041_000C) devuelve 0: comprobar valor
 
     $display("--- %0d errores ---", errores);
     $finish;

@@ -3,7 +3,7 @@
 //
 // El programa enciende y apaga el LED 0 lo más rápido que puede.
 //
-// Experimento opcional (Semana2.md, paso L2):
+// Experimento de la Semana 2 (Aventura: paso L2, opcional; Jefe Final: tarea 7):
 //   1. Calcule la frecuencia de la señal del LED 0 con la tabla de ciclos de la
 //      guía (el bucle se ve en build/firmware.lst después de make firmware PROG=parpadeo).
 //   2. make syn PROG=parpadeo BOARD=...  y  make config BOARD=...

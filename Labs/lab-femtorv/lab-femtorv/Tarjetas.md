@@ -109,7 +109,7 @@ S1 se usa como reset, así que solo queda S2 para `BOTONES[0]`. `BOTONES[1]` val
 
 ### Medir una señal o agregar un pin
 
-Los LEDs están soldados en la tarjeta. Para medir con el osciloscopio (Semana 2, experimento L2) hay dos opciones:
+Los LEDs están soldados en la tarjeta. Para medir con el osciloscopio (experimento del parpadeo, Semana 2) hay dos opciones:
 
 **Opción A (recomendada): sacar la señal a un pin del conector.**
 
